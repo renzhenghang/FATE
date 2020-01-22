@@ -47,4 +47,3 @@ class DecisionTree(object):
     def set_runtime_idx(self, runtime_idx):
         self.runtime_idx = runtime_idx
         self.sitename = ":".join([self.sitename, str(self.runtime_idx)])
-

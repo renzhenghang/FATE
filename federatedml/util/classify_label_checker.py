@@ -70,6 +70,31 @@ class ClassifyLabelChecker(object):
 
         return class_set
 
+    @staticmethod
+    def _count_func(kv_iterator):
+        sum_dict = {}
+        for k, v in kv_iterator:
+            label = v.label
+            if label not in sum_dict:
+                sum_dict[label] = 0
+            sum_dict[label] += 1
+        return sum_dict
+
+    @staticmethod
+    def _count_reduce_func(sum_dict1, sum_dict2):
+        for k in sum_dict1:
+            if k in sum_dict2:
+                sum_dict2[k] += sum_dict1[k]
+            else:
+                sum_dict2[k] = sum_dict1[k]
+        return sum_dict2
+
+    @staticmethod
+    def count_label(data_inst):
+        summary = data_inst.mapPartitions(ClassifyLabelChecker._count_func)\
+            .reduce(ClassifyLabelChecker._count_reduce_func)
+        return summary
+
 
 class RegressionLabelChecker(object):
     @staticmethod
@@ -92,3 +117,17 @@ class RegressionLabelChecker(object):
             label = float(value.label)
         except:
             raise ValueError("In Regression Task, all label should be numeric!!")
+
+    @staticmethod
+    def _sum_func(kv_iterator):
+        sum_val = 0
+        for k, v in kv_iterator:
+            label = v.label
+            sum_val += label
+        return sum_val
+
+    @staticmethod
+    def compute_label_average(data_inst):
+
+        sum_val = data_inst.mapPartitions(RegressionLabelChecker._sum_func).reduce(lambda sum1, sum2: sum1+sum2)
+        return sum_val / data_inst.count()

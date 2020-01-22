@@ -74,6 +74,7 @@ class HeteroSecureBoostingTreeGuest(BoostingTree):
         self.y = None
         self.F = None
         self.predict_F = None
+        self.tree_stump_predict_val = None
         self.data_bin = None
         self.loss = None
         self.init_score = None
@@ -138,6 +139,7 @@ class HeteroSecureBoostingTreeGuest(BoostingTree):
 
         binning_obj.fit_split_points(data_instance)
         self.data_bin, self.bin_split_points, self.bin_sparse_points = binning_obj.convert_feature_to_bin(data_instance)
+        LOGGER.info("convert feature to bins over")
         LOGGER.info("convert feature to bins over")
 
     def set_y(self):
@@ -206,10 +208,14 @@ class HeteroSecureBoostingTreeGuest(BoostingTree):
     def update_f_value(self, new_f=None, tidx=-1, mode="train"):
         LOGGER.info("update tree f value, tree idx is {}".format(tidx))
         if mode == "train" and self.F is None:
-            if self.tree_dim > 1:
-                self.F, self.init_score = self.loss.initialize(self.y, self.tree_dim)
+            if self.tree_stump_predict_val is None:
+                if self.tree_dim > 1:
+                    self.F, self.init_score = self.loss.initialize(self.y, self.tree_dim)
+                else:
+                    self.F, self.init_score = self.loss.initialize(self.y)
             else:
-                self.F, self.init_score = self.loss.initialize(self.y)
+                self.F = self.y.mapValues(lambda x: self.tree_stump_predict_val)
+
         else:
             accumulate_f = functools.partial(self.accumulate_f,
                                              lr=self.learning_rate,
@@ -297,12 +303,41 @@ class HeteroSecureBoostingTreeGuest(BoostingTree):
                 param_name: param_protobuf
                 }
 
+    def generate_tree_stump_pred_val(self,):
+        """
+        initialize predict val to prevent data_leakage
+        """
+        LOGGER.info('initializing stump prediction value')
+        data = self.data_bin
+        if self.task_type == consts.CLASSIFICATION:
+            label_count = ClassifyLabelChecker.count_label(data)
+            init_prob = np.zeros(len(label_count))
+            for label_idx, count in label_count.items():
+                init_prob[label_idx] = count
+            init_prob = init_prob / data.count()
+
+            class_num = len(label_count)
+            if class_num <= 2:
+                stump_predict_val = np.array([init_prob[-1]])  # prob of 1
+            else:
+                stump_predict_val = init_prob
+
+        else:
+            avg_label = RegressionLabelChecker.compute_label_average(data)
+            stump_predict_val = np.array([float(avg_label)])
+
+        self.tree_stump_predict_val = stump_predict_val
+        LOGGER.debug('tree stump val is {}'.format(self.tree_stump_predict_val))
+        self.init_score = stump_predict_val
+
+
     def fit(self, data_inst, validate_data=None):
         LOGGER.info("begin to train secureboosting guest model")
         self.gen_feature_fid_mapping(data_inst.schema)
         data_inst = self.data_alignment(data_inst)
         self.convert_feature_to_bin(data_inst)
         self.set_y()
+        # self.generate_tree_stump_pred_val()
         self.update_f_value()
         self.generate_encrypter()
 
@@ -320,7 +355,6 @@ class HeteroSecureBoostingTreeGuest(BoostingTree):
 
         for i in range(self.num_trees):
             self.compute_grad_and_hess()
-
             for tidx in range(self.tree_dim):
                 tree_inst = HeteroDecisionTreeGuest(self.tree_param)
 

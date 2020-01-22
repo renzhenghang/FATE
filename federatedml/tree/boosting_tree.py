@@ -41,7 +41,7 @@ class BoostingTree(ModelBase):
     def __init__(self):
         super(BoostingTree, self).__init__()
         self.tree_param = None
-        self.task_type = None
+        self.task_type=None
         self.objective_param = None
         self.learning_rate = None
         self.learning_rate = None
