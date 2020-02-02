@@ -36,7 +36,6 @@ typedef cgbn_mem_t<CPH_BITS> gpu_cph;
 void store2dev(void *address,  mpz_t z, unsigned int BITS) {
   size_t words;
   if(mpz_sizeinbase(z, 2)>BITS) {
-    printf("error mpz_sizeinbase:%d\n", mpz_sizeinbase(z, 2));
     exit(1);
   }
 
@@ -57,7 +56,6 @@ void getprimeover(mpz_t rop, int bits, int &seed_start){
   mpz_t rand_num;
   mpz_init(rand_num);
   mpz_urandomb(rand_num, state, bits);
-  gmp_printf("rand_num:%Zd\n", rand_num);
   mpz_setbit(rand_num, bits-1);
   mpz_nextprime(rop, rand_num); 
   mpz_clear(rand_num);
@@ -145,9 +143,6 @@ class PaillierPrivateKey {
     h_func_gmp(hp, g, p, psquare); 
     h_func_gmp(hq, g, q, qsquare); 
 
-    gmp_printf("hp:%Zd\n", hp);
-    gmp_printf("hq:%Zd\n", hq);
-	gmp_printf("psquare: %Zd\n", psquare);
     store2dev(&this->p, p, BITS);
     store2dev(&this->q, q, BITS);
     store2dev(&this->psquare, psquare, BITS);
