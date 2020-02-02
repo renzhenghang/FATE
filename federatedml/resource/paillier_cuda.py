@@ -501,5 +501,5 @@ __global__ void raw_decrypt(PaillierPrivateKey<CPH_BITS> *gpu_priv_key, Paillier
 
 from pycuda.compiler import SourceModule
 
-mod = SourceModule(paillier_code)
+mod = SourceModule(paillier_code, no_extern_c=True)
 paillier_enc_gpu = mod.get_function("raw_encrypt")
