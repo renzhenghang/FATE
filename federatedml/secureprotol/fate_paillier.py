@@ -19,7 +19,10 @@
 from collections.abc import Mapping
 from federatedml.secureprotol.fixedpoint import FixedPointNumber
 from federatedml.secureprotol import gmpy_math
+from ..resource.task_mgr import EncryptTask, DecryptTask, AddTask, MulTask
 import random
+random.seed(0)
+# from ..resource import compute_engine as CE
 
 
 class PaillierKeypair(object):
@@ -69,7 +72,8 @@ class PaillierPublicKey(object):
     def apply_obfuscator(self, ciphertext, random_value=None):
         """
         """
-        r = random_value or random.SystemRandom().randrange(1, self.n)
+        # r = random_value or random.SystemRandom().randrange(1, self.n)
+        r = random_value or random.randint(1, self.n)
         obfuscator = gmpy_math.powmod(r, self.n, self.nsquare)
 
         return (ciphertext * obfuscator) % self.nsquare
@@ -335,3 +339,9 @@ class PaillierEncryptedNumber(object):
 
         return PaillierEncryptedNumber(self.public_key, ciphertext, exponent)
 
+
+class PaillierEncryptedArray:
+    """
+    describe encrypted array/tensor
+    """
+    pass

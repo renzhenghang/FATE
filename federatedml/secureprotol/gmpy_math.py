@@ -17,6 +17,7 @@
 import os
 import random
 import gmpy2
+random.seed(0)
 
 POWMOD_GMP_SIZE = pow(2, 64)
 
@@ -49,7 +50,8 @@ def invert(a, b):
 def getprimeover(n):
     """return a random n-bit prime number
     """     
-    r = gmpy2.mpz(random.SystemRandom().getrandbits(n))
+    # r = gmpy2.mpz(random.SystemRandom().getrandbits(n))
+    r = gmpy2.mpz(random.getrandbits(n))
     r = gmpy2.bit_set(r, n - 1)
     
     return int(gmpy2.next_prime(r))
