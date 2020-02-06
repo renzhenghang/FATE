@@ -289,7 +289,7 @@ __global__ __noinline__ void apply_obfuscator(PaillierPublicKey *gpu_pub_key, cg
   cgbn_load(bn_env, n, &gpu_pub_key[0].n);
   cgbn_load(bn_env, nsquare, &gpu_pub_key[0].nsquare);
   cgbn_load(bn_env, cipher, &ciphers[tid]);
-  mont_modular_power<MAX_BITS, TPI>(bn_env, tmp, r, n, nsquare);
+  mont_modular_power(bn_env, tmp, r, n, nsquare);
   cgbn_mul_wide(bn_env, tmp_wide, cipher, tmp);
   cgbn_rem_wide(bn_env, r, tmp_wide, nsquare);
   cgbn_store(bn_env, obfuscators + tid, r);   // store r into sum
@@ -361,7 +361,7 @@ __global__ __noinline__ void raw_encrypt_with_obfs(PaillierPublicKey *gpu_pub_ke
 
   cgbn_set_ui32(bn_env, r, rand_r); // TODO: new rand or reuse
 
-  mont_modular_power<MAX_BITS, TPI>(bn_env,tmp, r, n, nsquare);
+  mont_modular_power(bn_env,tmp, r, n, nsquare);
 
   cgbn_mul_wide(bn_env, tmp_wide, cipher, tmp);
   cgbn_rem(bn_env, r, tmp_wide, nsquare);
