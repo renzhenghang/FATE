@@ -72,10 +72,10 @@ class PaillierPublicKey {
     mpz_div_ui(max_int, n, 3);
     mpz_sub_ui(max_int, max_int, 1);
 
-    store2dev(&this->g, g, BITS); 
-	  store2dev(&this->n, n, BITS); 
-    store2dev(&this->nsquare, nsquare, BITS); 
-    store2dev(&this->max_int, max_int, BITS); 
+    store2dev(&this->g, g, CPH_BITS); 
+	  store2dev(&this->n, n, CPH_BITS); 
+    store2dev(&this->nsquare, nsquare, CPH_BITS); 
+    store2dev(&this->max_int, max_int, CPH_BITS); 
     mpz_clear(nsquare);
     mpz_clear(max_int);
   }
@@ -133,13 +133,13 @@ class PaillierPrivateKey {
     h_func_gmp(hp, g, p, psquare); 
     h_func_gmp(hq, g, q, qsquare); 
 
-    store2dev(&this->p, p, BITS);
-    store2dev(&this->q, q, BITS);
-    store2dev(&this->psquare, psquare, BITS);
-    store2dev(&this->qsquare, qsquare, BITS);
-    store2dev(&this->q_inverse, q_inverse, BITS);
-    store2dev(&this->hp, hp, BITS);
-    store2dev(&this->hq, hq, BITS);
+    store2dev(&this->p, p, CPH_BITS);
+    store2dev(&this->q, q, CPH_BITS);
+    store2dev(&this->psquare, psquare, CPH_BITS);
+    store2dev(&this->qsquare, qsquare, CPH_BITS);
+    store2dev(&this->q_inverse, q_inverse, CPH_BITS);
+    store2dev(&this->hp, hp, CPH_BITS);
+    store2dev(&this->hq, hq, CPH_BITS);
 
     mpz_clear(p);
     mpz_clear(q);
