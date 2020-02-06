@@ -1,8 +1,3 @@
-import pycuda.autoinit
-import pycuda.driver as drv
-import numpy as np
-
-paillier_code = """
 #include <stdint.h>
 #include <stdlib.h>
 #include <cuda.h>
@@ -19,18 +14,14 @@ paillier_code = """
 
 // IMPORTANT:  DO NOT DEFINE TPI OR BITS BEFORE INCLUDING CGBN
 #define TPI 32
-#define MAX_BITS 4096
 #define CPH_BITS 2048 // cipher bits
 #define MAX_RAND_SEED 4294967295U
 #define WINDOW_BITS 5
 #define LOW_BOUND 5
-#include <time.h> 
 
 // helpful typedefs for the kernel
 typedef cgbn_context_t<TPI>         context_t;
-typedef cgbn_env_t<context_t, MAX_BITS> env_wide_t;
 typedef cgbn_env_t<context_t, CPH_BITS> env_cph_t;
-typedef cgbn_mem_t<MAX_BITS> gpu_wide;
 typedef cgbn_mem_t<CPH_BITS> gpu_cph;
 
 void store2dev(void *address,  mpz_t z, unsigned int BITS) {
@@ -65,13 +56,12 @@ void invert(mpz_t rop, mpz_t a, mpz_t b) {
   mpz_invert(rop, a, b);
 }
 
-template<unsigned int BITS>
 class PaillierPublicKey {
  public:
-  cgbn_mem_t<BITS> g;
-  cgbn_mem_t<BITS> n;
-  cgbn_mem_t<BITS> nsquare;
-  cgbn_mem_t<BITS> max_int;
+  cgbn_mem_t<CPH_BITS> g;
+  cgbn_mem_t<CPH_BITS> n;
+  cgbn_mem_t<CPH_BITS> nsquare;
+  cgbn_mem_t<CPH_BITS> max_int;
   
   void init(mpz_t &n, mpz_t g, uint32_t key_len) {
     mpz_t nsquare, max_int; 
@@ -83,7 +73,7 @@ class PaillierPublicKey {
     mpz_sub_ui(max_int, max_int, 1);
 
     store2dev(&this->g, g, BITS); 
-	store2dev(&this->n, n, BITS); 
+	  store2dev(&this->n, n, BITS); 
     store2dev(&this->nsquare, nsquare, BITS); 
     store2dev(&this->max_int, max_int, BITS); 
     mpz_clear(nsquare);
@@ -91,24 +81,24 @@ class PaillierPublicKey {
   }
 
   PaillierPublicKey() {
-	memset(&g, 0, sizeof(g));
-	memset(&n, 0, sizeof(n));
-	memset(&nsquare, 0, sizeof(nsquare));
-	memset(&max_int, 0, sizeof(max_int));
+	  memset(&g, 0, sizeof(g));
+	  memset(&n, 0, sizeof(n));
+	  memset(&nsquare, 0, sizeof(nsquare));
+	  memset(&max_int, 0, sizeof(max_int));
   }
 };
 
 
-template<unsigned int BITS>
+// template<unsigned int BITS>
 class PaillierPrivateKey {
  public:
-  cgbn_mem_t<BITS> p;
-  cgbn_mem_t<BITS> q;
-  cgbn_mem_t<BITS> psquare;
-  cgbn_mem_t<BITS> qsquare;
-  cgbn_mem_t<BITS> q_inverse;
-  cgbn_mem_t<BITS> hp;
-  cgbn_mem_t<BITS> hq;
+  cgbn_mem_t<CPH_BITS> p;
+  cgbn_mem_t<CPH_BITS> q;
+  cgbn_mem_t<CPH_BITS> psquare;
+  cgbn_mem_t<CPH_BITS> qsquare;
+  cgbn_mem_t<CPH_BITS> q_inverse;
+  cgbn_mem_t<CPH_BITS> hp;
+  cgbn_mem_t<CPH_BITS> hq;
 
   void h_func_gmp(mpz_t rop, mpz_t g, mpz_t x, mpz_t xsquare) {
     mpz_t tmp;
@@ -120,7 +110,7 @@ class PaillierPrivateKey {
     invert(rop, rop, x);
     mpz_clear(tmp); 
   }
-  void init(PaillierPublicKey<BITS> pub_key, mpz_t g, mpz_t raw_p, mpz_t raw_q, uint32_t key_len) {
+  void init(PaillierPublicKey pub_key, mpz_t g, mpz_t raw_p, mpz_t raw_q, uint32_t key_len) {
     // TODO: valid publick key    
     mpz_t p, q, psquare, qsquare, q_inverse, hp, hq;
     mpz_init(p);
@@ -161,35 +151,11 @@ class PaillierPrivateKey {
   }
 };
 
-template<unsigned int BITS_IN, unsigned int BITS_OUT>
-void resize_pub_key(PaillierPublicKey<BITS_IN> &pub_key_in, PaillierPublicKey<BITS_OUT> &pub_key_out) {
-  int num_bytes1 = (BITS_IN + 7)/8;
-  int num_bytes2 = (BITS_OUT + 7)/8;
-  num_bytes1 = num_bytes1 < num_bytes2 ? num_bytes1 : num_bytes2;
-  memcpy(&pub_key_out.n, &pub_key_in.n, num_bytes1);  
-  memcpy(&pub_key_out.nsquare, &pub_key_in.nsquare, num_bytes1);  
-  memcpy(&pub_key_out.max_int, &pub_key_in.max_int, num_bytes1);  
-  memcpy(&pub_key_out.g, &pub_key_in.g, num_bytes1);  
-}
-template<unsigned int BITS_IN, unsigned int BITS_OUT>
-void resize_priv_key(PaillierPrivateKey<BITS_IN> &priv_key_in, PaillierPrivateKey<BITS_OUT> &priv_key_out) {
-  int num_bytes1 = (BITS_IN + 7)/8;
-  int num_bytes2 = (BITS_OUT + 7)/8;
-  num_bytes1 = num_bytes1 < num_bytes2 ? num_bytes1 : num_bytes2;
-  memcpy(&priv_key_out.p, &priv_key_in.p, num_bytes1);
-  memcpy(&priv_key_out.q, &priv_key_in.q, num_bytes1);
-  memcpy(&priv_key_out.psquare, &priv_key_in.psquare, num_bytes1);
-  memcpy(&priv_key_out.qsquare, &priv_key_in.qsquare, num_bytes1);
-  memcpy(&priv_key_out.q_inverse, &priv_key_in.q_inverse, num_bytes1);
-  memcpy(&priv_key_out.hp, &priv_key_in.hp, num_bytes1);
-  memcpy(&priv_key_out.hq, &priv_key_in.hq, num_bytes1);
-}
-
-template<unsigned int _BITS, unsigned int _TPI>
+// template<unsigned int _BITS, unsigned int _TPI>
 __device__ __forceinline__ 
-void mont_modular_power(cgbn_env_t<context_t, _BITS> &bn_env, typename cgbn_env_t<context_t, _BITS>::cgbn_t &result, 
-		const typename cgbn_env_t<context_t, _BITS>::cgbn_t &x, const typename cgbn_env_t<context_t, _BITS>::cgbn_t &power, 
-		const typename cgbn_env_t<context_t, _BITS>::cgbn_t &modulus) {
+void mont_modular_power(env_cph_t &bn_env, env_cph_t::cgbn_t &result, 
+		const env_cph_t::cgbn_t &x, const env_cph_t::cgbn_t &power, 
+		const env_cph_t::cgbn_t &modulus) {
 /************************************************************************************
 * calculate x^power mod modulus with montgomery multiplication.
 * input: x, power, modulus.
@@ -197,13 +163,13 @@ void mont_modular_power(cgbn_env_t<context_t, _BITS> &bn_env, typename cgbn_env_
 * requirement: x < modulus and modulus is an odd number.
 */
 
-  typename cgbn_env_t<context_t, _BITS>::cgbn_t         t, starts;
+  env_cph_t::cgbn_t         t, starts;
   int32_t      index, position, leading;
   uint32_t     mont_inv;
-  typename cgbn_env_t<context_t, _BITS>::cgbn_local_t   odd_powers[1<<WINDOW_BITS-1];
+  env_cph_t::cgbn_local_t   odd_powers[1<<WINDOW_BITS-1];
 
   // find the leading one in the power
-  leading=_BITS-1-cgbn_clz(bn_env, power);
+  leading=CPH_BITS-1-cgbn_clz(bn_env, power);
   if(leading>=0) {
     // convert x into Montgomery space, store in the odd powers table
     mont_inv=cgbn_bn2mont(bn_env, result, x, modulus);
@@ -296,8 +262,8 @@ __global__ void setup_kernel(curandState *state){
   curand_init(1234, idx, 0, &state[idx]);
 }
 
-__global__ __noinline__ void apply_obfuscator(PaillierPublicKey<MAX_BITS> *gpu_pub_key, cgbn_error_report_t *report, 
-		gpu_wide *ciphers, gpu_wide *obfuscators, int count, curandState *state ) {
+__global__ __noinline__ void apply_obfuscator(PaillierPublicKey *gpu_pub_key, cgbn_error_report_t *report, 
+		gpu_cph *ciphers, gpu_cph *obfuscators, int count, curandState *state ) {
 /******************************************************************************************
 * obfuscate the encrypted text, obfuscator = cipher * r^n mod n^2
 * in:
@@ -312,25 +278,25 @@ __global__ __noinline__ void apply_obfuscator(PaillierPublicKey<MAX_BITS> *gpu_p
     return;
 
   context_t      bn_context(cgbn_report_monitor, report, tid);  
-  env_wide_t     bn_env(bn_context.env<env_wide_t>());                   
-  env_wide_t::cgbn_t  n, nsquare,cipher, r, tmp; 
+  env_cph_t     bn_env(bn_context.env<env_cph_t>());                   
+  env_cph_t::cgbn_t  n, nsquare,cipher, r, tmp;
 
   curandState localState = state[idx];
   unsigned int rand_r = curand_uniform(&localState) * MAX_RAND_SEED;                  
   state[idx] = localState;
 
   cgbn_set_ui32(bn_env, r, rand_r); // TODO: new rand or reuse
-  cgbn_load(bn_env, n, &gpu_pub_key[0].n);      
+  cgbn_load(bn_env, n, &gpu_pub_key[0].n);
   cgbn_load(bn_env, nsquare, &gpu_pub_key[0].nsquare);
   cgbn_load(bn_env, cipher, &ciphers[tid]);
   mont_modular_power<MAX_BITS, TPI>(bn_env, tmp, r, n, nsquare);
-  cgbn_mul(bn_env, tmp, cipher, tmp);
-  cgbn_rem(bn_env, r, tmp, nsquare);
+  cgbn_mul_wide(bn_env, tmp_wide, cipher, tmp);
+  cgbn_rem_wide(bn_env, r, tmp_wide, nsquare);
   cgbn_store(bn_env, obfuscators + tid, r);   // store r into sum
 }
 
 
-__global__ void raw_encrypt(PaillierPublicKey<CPH_BITS> *gpu_pub_key, cgbn_error_report_t *report, 
+__global__ void raw_encrypt(PaillierPublicKey *gpu_pub_key, cgbn_error_report_t *report, 
 		gpu_cph *plains, gpu_cph *ciphers,int count) {
 /*************************************************************************************
 * simple encrption cipher = 1 + plain * n mod n^2
@@ -344,7 +310,8 @@ __global__ void raw_encrypt(PaillierPublicKey<CPH_BITS> *gpu_pub_key, cgbn_error
     return;
   context_t      bn_context(cgbn_report_monitor, report, tid);  
   env_cph_t      bn_env(bn_context.env<env_cph_t>());                   
-  env_cph_t::cgbn_t  n, nsquare, plain,  tmp, max_int, cipher;               
+  env_cph_t::cgbn_t  n, nsquare, plain,  tmp, max_int, cipher;
+  env_cph_t::cgbn_wide_t tmp_wide;
   cgbn_load(bn_env, n, &gpu_pub_key[0].n);      
   cgbn_load(bn_env, plain, plains + tid);
   cgbn_load(bn_env, nsquare, &gpu_pub_key[0].nsquare);
@@ -358,8 +325,8 @@ __global__ void raw_encrypt(PaillierPublicKey<CPH_BITS> *gpu_pub_key, cgbn_error
   cgbn_store(bn_env, ciphers + tid, cipher);   // store r into sum
 }
 
-__global__ __noinline__ void raw_encrypt_with_obfs(PaillierPublicKey<MAX_BITS> *gpu_pub_key, cgbn_error_report_t *report, 
-		gpu_wide *plains, gpu_wide *ciphers, int count, curandState *state) {
+__global__ __noinline__ void raw_encrypt_with_obfs(PaillierPublicKey *gpu_pub_key, cgbn_error_report_t *report, 
+		gpu_cph *plains, gpu_cph *ciphers, int count, curandState *state) {
 /*******************************************************************************
 * encryption and obfuscation in one function, with less memory copy.
 * in:
@@ -372,9 +339,10 @@ __global__ __noinline__ void raw_encrypt_with_obfs(PaillierPublicKey<MAX_BITS> *
   int tid= idx/TPI;
   if(tid>=count)
     return;
-  context_t      bn_context(cgbn_report_monitor, report, tid);  
-  env_wide_t     bn_env(bn_context.env<env_wide_t>());                   
-  env_wide_t::cgbn_t  n, nsquare, plain,  tmp, max_int, cipher; 
+  context_t     bn_context(cgbn_report_monitor, report, tid);  
+  env_cph_t     bn_env(bn_context.env<env_cph_t>());                   
+  env_cph_t::cgbn_t  n, nsquare, plain,  tmp, max_int, cipher; 
+  env_cph_t::cgbn_wide_t tmp_wide;
   cgbn_load(bn_env, n, &gpu_pub_key[0].n);      
   cgbn_load(bn_env, plain, plains + tid);
   cgbn_load(bn_env, nsquare, &gpu_pub_key[0].nsquare);
@@ -385,7 +353,7 @@ __global__ __noinline__ void raw_encrypt_with_obfs(PaillierPublicKey<MAX_BITS> *
   cgbn_add_ui32(bn_env, cipher, cipher, 1);
   cgbn_rem(bn_env, cipher, cipher, nsquare);
 
-  env_wide_t::cgbn_t r; 
+  env_cph_t::cgbn_t r; 
 
   curandState localState = state[idx];
   unsigned int rand_r = curand_uniform(&localState) * MAX_RAND_SEED;                  
@@ -395,13 +363,13 @@ __global__ __noinline__ void raw_encrypt_with_obfs(PaillierPublicKey<MAX_BITS> *
 
   mont_modular_power<MAX_BITS, TPI>(bn_env,tmp, r, n, nsquare);
 
-  cgbn_mul(bn_env, tmp, cipher, tmp);
-  cgbn_rem(bn_env, r, tmp, nsquare);
+  cgbn_mul_wide(bn_env, tmp_wide, cipher, tmp);
+  cgbn_rem(bn_env, r, tmp_wide, nsquare);
   cgbn_store(bn_env, ciphers + tid, r);   // store r into sum
 }
 
 
-__global__ __noinline__ void raw_add(PaillierPublicKey<CPH_BITS> *gpu_pub_key, cgbn_error_report_t *report, gpu_cph *ciphers_r, 
+__global__ __noinline__ void raw_add(PaillierPublicKey *gpu_pub_key, cgbn_error_report_t *report, gpu_cph *ciphers_r, 
 		gpu_cph *ciphers_a, gpu_cph *ciphers_b,int count) {
 /**************************************************************************************
 * add under encrypted text.
@@ -425,7 +393,7 @@ __global__ __noinline__ void raw_add(PaillierPublicKey<CPH_BITS> *gpu_pub_key, c
   cgbn_store(bn_env, ciphers_r + tid, r);
 }
 
-__global__ void raw_mul(PaillierPublicKey<CPH_BITS> *gpu_pub_key, cgbn_error_report_t *report, gpu_cph *ciphers_r, 
+__global__ void raw_mul(PaillierPublicKey *gpu_pub_key, cgbn_error_report_t *report, gpu_cph *ciphers_r, 
 		gpu_cph *ciphers_a, gpu_cph *plains_b,int count) {
 /****************************************************************************************
 * multiplication under encrypted text. b * a.
@@ -448,7 +416,7 @@ __global__ void raw_mul(PaillierPublicKey<CPH_BITS> *gpu_pub_key, cgbn_error_rep
   cgbn_load(bn_env, plain, plains_b + tid);
 
   cgbn_sub(bn_env, tmp, n, max_int); 
- if(cgbn_compare(bn_env, plain, tmp) >= 0 ) {
+  if(cgbn_compare(bn_env, plain, tmp) >= 0 ) {
     // Very large plaintext, take a sneaky shortcut using inverses
     cgbn_modular_inverse(bn_env,neg_c, cipher, nsquare);
     cgbn_sub(bn_env, neg_scalar, n, plain);
@@ -460,7 +428,7 @@ __global__ void raw_mul(PaillierPublicKey<CPH_BITS> *gpu_pub_key, cgbn_error_rep
 }
 
   
-__global__ void raw_decrypt(PaillierPrivateKey<CPH_BITS> *gpu_priv_key, PaillierPublicKey<CPH_BITS> *gpu_pub_key,
+__global__ void raw_decrypt(PaillierPrivateKey *gpu_priv_key, PaillierPublicKey *gpu_pub_key,
 	   	cgbn_error_report_t *report, gpu_cph *plains, gpu_cph *ciphers, int count) {
 /*************************************************************************************
 * decryption
@@ -496,10 +464,8 @@ __global__ void raw_decrypt(PaillierPrivateKey<CPH_BITS> *gpu_priv_key, Paillier
   cgbn_rem(bn_env, tmp, tmp, n);
   
   cgbn_store(bn_env, plains + tid, tmp);
-} 
-"""
+}
 
-from pycuda.compiler import SourceModule
-
-mod = SourceModule(paillier_code, no_extern_c=True)
-paillier_enc_gpu = mod.get_function("raw_encrypt")
+extern "C" {
+  void test_func() {}
+}
