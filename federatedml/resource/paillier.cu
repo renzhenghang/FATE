@@ -243,9 +243,9 @@ __device__  __forceinline__ void l_func(env_cph_t &bn_env, env_cph_t::cgbn_t &ou
   
   if(cgbn_compare(bn_env, cipher_t, xsquare_t) >= 0) {
     cgbn_rem(bn_env, cipher_lt, cipher_t, xsquare_t);
-    mont_modular_power<CPH_BITS, TPI>(bn_env,tmp,cipher_lt,tmp2,xsquare_t);
+    mont_modular_power(bn_env,tmp,cipher_lt,tmp2,xsquare_t);
   } else {
-    mont_modular_power<CPH_BITS, TPI>(bn_env, tmp, cipher_t, tmp2, xsquare_t);
+    mont_modular_power(bn_env, tmp, cipher_t, tmp2, xsquare_t);
   }
  
   cgbn_sub_ui32(bn_env, tmp, tmp, 1);
@@ -280,6 +280,7 @@ __global__ __noinline__ void apply_obfuscator(PaillierPublicKey *gpu_pub_key, cg
   context_t      bn_context(cgbn_report_monitor, report, tid);  
   env_cph_t     bn_env(bn_context.env<env_cph_t>());                   
   env_cph_t::cgbn_t  n, nsquare,cipher, r, tmp;
+  env_cph_t::cgbn_t tmp_wide;
 
   curandState localState = state[idx];
   unsigned int rand_r = curand_uniform(&localState) * MAX_RAND_SEED;                  
@@ -311,7 +312,6 @@ __global__ void raw_encrypt(PaillierPublicKey *gpu_pub_key, cgbn_error_report_t 
   context_t      bn_context(cgbn_report_monitor, report, tid);  
   env_cph_t      bn_env(bn_context.env<env_cph_t>());                   
   env_cph_t::cgbn_t  n, nsquare, plain,  tmp, max_int, cipher;
-  env_cph_t::cgbn_wide_t tmp_wide;
   cgbn_load(bn_env, n, &gpu_pub_key[0].n);      
   cgbn_load(bn_env, plain, plains + tid);
   cgbn_load(bn_env, nsquare, &gpu_pub_key[0].nsquare);
@@ -364,7 +364,7 @@ __global__ __noinline__ void raw_encrypt_with_obfs(PaillierPublicKey *gpu_pub_ke
   mont_modular_power(bn_env,tmp, r, n, nsquare);
 
   cgbn_mul_wide(bn_env, tmp_wide, cipher, tmp);
-  cgbn_rem(bn_env, r, tmp_wide, nsquare);
+  cgbn_rem_wide(bn_env, r, tmp_wide, nsquare);
   cgbn_store(bn_env, ciphers + tid, r);   // store r into sum
 }
 
@@ -420,9 +420,9 @@ __global__ void raw_mul(PaillierPublicKey *gpu_pub_key, cgbn_error_report_t *rep
     // Very large plaintext, take a sneaky shortcut using inverses
     cgbn_modular_inverse(bn_env,neg_c, cipher, nsquare);
     cgbn_sub(bn_env, neg_scalar, n, plain);
-    mont_modular_power<CPH_BITS, TPI>(bn_env, r, neg_c, neg_scalar, nsquare);
+    mont_modular_power(bn_env, r, neg_c, neg_scalar, nsquare);
   } else {
-    mont_modular_power<CPH_BITS, TPI>(bn_env, r, cipher, plain, nsquare);
+    mont_modular_power(bn_env, r, cipher, plain, nsquare);
   }
   cgbn_store(bn_env, ciphers_r + tid, r);
 }
