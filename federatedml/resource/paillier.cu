@@ -280,7 +280,7 @@ __global__ __noinline__ void apply_obfuscator(PaillierPublicKey *gpu_pub_key, cg
   context_t      bn_context(cgbn_report_monitor, report, tid);  
   env_cph_t     bn_env(bn_context.env<env_cph_t>());                   
   env_cph_t::cgbn_t  n, nsquare,cipher, r, tmp;
-  env_cph_t::cgbn_t tmp_wide;
+  env_cph_t::cgbn_wide_t tmp_wide;
 
   curandState localState = state[idx];
   unsigned int rand_r = curand_uniform(&localState) * MAX_RAND_SEED;                  
