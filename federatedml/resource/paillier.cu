@@ -470,22 +470,22 @@ PaillierPublicKey* gpu_pub_key;
 PaillierPrivateKey* gpu_priv_key;
 void init_pub_key(void *g, void *n, void *nsquare, void *max_int) {
   cudaMalloc(&gpu_pub_key, sizeof(PaillierPublicKey));
-  cudaMemcpy((void *)gpu_pub_key->g, g, CPH_BITS/8, cudaMemcpyHostToDevice);
-  cudaMemcpy((void *)gpu_pub_key->n, n, CPH_BITS/8, cudaMemcpyHostToDevice);
-  cudaMemcpy((void *)gpu_pub_key->nsquare, nsquare, CPH_BITS/8, cudaMemcpyHostToDevice);
-  cudaMemcpy((void *)gpu_pub_key->max_int, max_int, CPH_BITS/8, cudaMemcpyHostToDevice);
+  cudaMemcpy((void *)&gpu_pub_key->g, g, CPH_BITS/8, cudaMemcpyHostToDevice);
+  cudaMemcpy((void *)&gpu_pub_key->n, n, CPH_BITS/8, cudaMemcpyHostToDevice);
+  cudaMemcpy((void *)&gpu_pub_key->nsquare, nsquare, CPH_BITS/8, cudaMemcpyHostToDevice);
+  cudaMemcpy((void *)&gpu_pub_key->max_int, max_int, CPH_BITS/8, cudaMemcpyHostToDevice);
 }
 
 void init_priv_key(void *p, void *q, void *psquare, void *qsquare, void *q_inverse,
                    void *hp, void *hq) {
   cudaMalloc(&gpu_priv_key, sizeof(PaillierPrivateKey));
-  cudaMemcpy((void *)gpu_priv_key->p, p, CPH_BITS/8, cudaMemcpyHostToDevice);
-  cudaMemcpy((void *)gpu_priv_key->q, q, CPH_BITS/8, cudaMemcpyHostToDevice);
-  cudaMemcpy((void *)gpu_priv_key->psquare, psquare, CPH_BITS/8, cudaMemcpyHostToDevice);
-  cudaMemcpy((void *)gpu_priv_key->qsquare, qsquare, CPH_BITS/8, cudaMemcpyHostToDevice);
-  cudaMemcpy((void *)gpu_priv_key->q_inverse, q_inverse, CPH_BITS/8, cudaMemcpyHostToDevice);
-  cudaMemcpy((void *)gpu_priv_key->hp, hp, CPH_BITS/8, cudaMemcpyHostToDevice);
-  cudaMemcpy((void *)gpu_priv_key->hq, hq, CPH_BITS/8, cudaMemcpyHostToDevice);
+  cudaMemcpy((void *)&gpu_priv_key->p, p, CPH_BITS/8, cudaMemcpyHostToDevice);
+  cudaMemcpy((void *)&gpu_priv_key->q, q, CPH_BITS/8, cudaMemcpyHostToDevice);
+  cudaMemcpy((void *)&gpu_priv_key->psquare, psquare, CPH_BITS/8, cudaMemcpyHostToDevice);
+  cudaMemcpy((void *)&gpu_priv_key->qsquare, qsquare, CPH_BITS/8, cudaMemcpyHostToDevice);
+  cudaMemcpy((void *)&gpu_priv_key->q_inverse, q_inverse, CPH_BITS/8, cudaMemcpyHostToDevice);
+  cudaMemcpy((void *)&gpu_priv_key->hp, hp, CPH_BITS/8, cudaMemcpyHostToDevice);
+  cudaMemcpy((void *)&gpu_priv_key->hq, hq, CPH_BITS/8, cudaMemcpyHostToDevice);
 }
 
 void call_raw_encrypt() {
