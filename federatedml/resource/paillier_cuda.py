@@ -1,5 +1,6 @@
 import ctypes
 from ctypes import c_char_p
+from functools import wraps
 
 CPH_BITS = 2048
 _key_init = False
@@ -11,15 +12,14 @@ def _load_cuda_lib():
 _cuda_lib = _load_cuda_lib()
 
 def check_key(func):
-    def wrapper():
-        if _key_init == False:
-            print('no key loaded, return')
-            return wrapper
-        func()
-        return wrapper
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if _key_init:
+            func(*args, **kwargs)
+    return wrapper
 
 def init_gpu_keys(pub_key, priv_key):
-    if _key_init == True:
+    if _key_init:
         print('key initiated, return.')
     c_n = c_char_p(pub_key.n.to_bytes(CPH_BITS//8, 'little'))
     c_g = c_char_p(pub_key.g.to_bytes(CPH_BITS//8, 'little'))
