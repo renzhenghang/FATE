@@ -476,7 +476,7 @@ char* init_pub_key(void *g, void *n, void *nsquare, void *max_int) {
   cudaMemcpy((void *)&gpu_pub_key->n, n, CPH_BITS/8, cudaMemcpyHostToDevice);
   cudaMemcpy((void *)&gpu_pub_key->nsquare, nsquare, CPH_BITS/8, cudaMemcpyHostToDevice);
   cudaMemcpy((void *)&gpu_pub_key->max_int, max_int, CPH_BITS/8, cudaMemcpyHostToDevice);
-  cudaMemcpy(&cpu_pub_key.g, (void *)gpu_pub_key->g, CPH_BITS/8, cudaMemcpyDeviceToHost);
+  cudaMemcpy(&cpu_pub_key.g, (void *)&gpu_pub_key->g, CPH_BITS/8, cudaMemcpyDeviceToHost);
   return (char *)&cpu_pub_key.g;
 }
 
