@@ -47,3 +47,6 @@ def raw_encrypt_gpu(value):
 @check_key
 def raw_decrypt_gpu(value):
     print('raw_decrypt')
+
+if __name__ == '__main__':
+    raw_decrypt_gpu(0)
