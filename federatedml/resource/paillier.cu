@@ -468,12 +468,16 @@ __global__ void raw_decrypt(PaillierPrivateKey *gpu_priv_key, PaillierPublicKey 
 extern "C" {
 PaillierPublicKey* gpu_pub_key;
 PaillierPrivateKey* gpu_priv_key;
-void init_pub_key(void *g, void *n, void *nsquare, void *max_int) {
+
+PaillierPublicKey cpu_pub_key;
+char* init_pub_key(void *g, void *n, void *nsquare, void *max_int) {
   cudaMalloc(&gpu_pub_key, sizeof(PaillierPublicKey));
   cudaMemcpy((void *)&gpu_pub_key->g, g, CPH_BITS/8, cudaMemcpyHostToDevice);
   cudaMemcpy((void *)&gpu_pub_key->n, n, CPH_BITS/8, cudaMemcpyHostToDevice);
   cudaMemcpy((void *)&gpu_pub_key->nsquare, nsquare, CPH_BITS/8, cudaMemcpyHostToDevice);
   cudaMemcpy((void *)&gpu_pub_key->max_int, max_int, CPH_BITS/8, cudaMemcpyHostToDevice);
+  cudaMemcpy(&cpu_pub_key.g, gpu_pub_key->g, CPH_BITS/8, cudaMemcpyDeviceToHost);
+  return &cpu_pub_key.g;
 }
 
 void init_priv_key(void *p, void *q, void *psquare, void *qsquare, void *q_inverse,
