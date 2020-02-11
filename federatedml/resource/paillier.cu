@@ -61,30 +61,6 @@ class PaillierPublicKey {
   cgbn_mem_t<CPH_BITS> n;
   cgbn_mem_t<CPH_BITS> nsquare;
   cgbn_mem_t<CPH_BITS> max_int;
-  
-  // void init(mpz_t &n, mpz_t g, uint32_t key_len) {
-  //   mpz_t nsquare, max_int; 
-  //   mpz_init(nsquare);
-  //   mpz_init(max_int);
-  //   mpz_add_ui(g, n,1); 
-  //   mpz_mul(nsquare, n, n);
-  //   mpz_div_ui(max_int, n, 3);
-  //   mpz_sub_ui(max_int, max_int, 1);
-
-  //   store2dev(&this->g, g, CPH_BITS); 
-	//   store2dev(&this->n, n, CPH_BITS); 
-  //   store2dev(&this->nsquare, nsquare, CPH_BITS); 
-  //   store2dev(&this->max_int, max_int, CPH_BITS); 
-  //   mpz_clear(nsquare);
-  //   mpz_clear(max_int);
-  // }
-
-  // PaillierPublicKey() {
-	//   memset(&g, 0, sizeof(g));
-	//   memset(&n, 0, sizeof(n));
-	//   memset(&nsquare, 0, sizeof(nsquare));
-	//   memset(&max_int, 0, sizeof(max_int));
-  // }
 };
 
 
@@ -98,56 +74,6 @@ class PaillierPrivateKey {
   cgbn_mem_t<CPH_BITS> q_inverse;
   cgbn_mem_t<CPH_BITS> hp;
   cgbn_mem_t<CPH_BITS> hq;
-
-  // void h_func_gmp(mpz_t rop, mpz_t g, mpz_t x, mpz_t xsquare) {
-  //   mpz_t tmp;
-  //   mpz_init(tmp);
-  //   mpz_sub_ui(tmp, x, 1);
-  //   mpz_powm(rop, g, tmp, xsquare); 
-  //   mpz_sub_ui(rop, rop, 1);
-  //   mpz_div(rop, rop, x);
-  //   invert(rop, rop, x);
-  //   mpz_clear(tmp); 
-  // }
-  // void init(PaillierPublicKey pub_key, mpz_t g, mpz_t raw_p, mpz_t raw_q, uint32_t key_len) {
-  //   // TODO: valid publick key    
-  //   mpz_t p, q, psquare, qsquare, q_inverse, hp, hq;
-  //   mpz_init(p);
-  //   mpz_init(q);
-  //   mpz_init(psquare);
-  //   mpz_init(qsquare);
-  //   mpz_init(q_inverse);
-  //   mpz_init(hp);
-  //   mpz_init(hq);
-  //   if(mpz_cmp(raw_q, raw_p) < 0) {
-  //     mpz_set(p, raw_q);
-  //     mpz_set(q, raw_p);
-  //   } else {
-  //     mpz_set(p, raw_p);
-  //     mpz_set(q, raw_q);
-  //   }
-  //   mpz_mul(psquare, p, p);
-  //   mpz_mul(qsquare, q, q);
-  //   invert(q_inverse, q, p);
-  //   h_func_gmp(hp, g, p, psquare); 
-  //   h_func_gmp(hq, g, q, qsquare); 
-
-  //   store2dev(&this->p, p, CPH_BITS);
-  //   store2dev(&this->q, q, CPH_BITS);
-  //   store2dev(&this->psquare, psquare, CPH_BITS);
-  //   store2dev(&this->qsquare, qsquare, CPH_BITS);
-  //   store2dev(&this->q_inverse, q_inverse, CPH_BITS);
-  //   store2dev(&this->hp, hp, CPH_BITS);
-  //   store2dev(&this->hq, hq, CPH_BITS);
-
-  //   mpz_clear(p);
-  //   mpz_clear(q);
-  //   mpz_clear(psquare);
-  //   mpz_clear(qsquare);
-  //   mpz_clear(q_inverse);
-  //   mpz_clear(hp);
-  //   mpz_clear(hq);
-  // }
 };
 
 // template<unsigned int _BITS, unsigned int _TPI>
@@ -469,15 +395,13 @@ extern "C" {
 PaillierPublicKey* gpu_pub_key;
 PaillierPrivateKey* gpu_priv_key;
 
-PaillierPublicKey cpu_pub_key;
-char* init_pub_key(void *g, void *n, void *nsquare, void *max_int) {
+void init_pub_key(void *n, void *g, void *nsquare, void *max_int) {
   cudaMalloc(&gpu_pub_key, sizeof(PaillierPublicKey));
   cudaMemcpy((void *)&gpu_pub_key->g, g, CPH_BITS/8, cudaMemcpyHostToDevice);
   cudaMemcpy((void *)&gpu_pub_key->n, n, CPH_BITS/8, cudaMemcpyHostToDevice);
   cudaMemcpy((void *)&gpu_pub_key->nsquare, nsquare, CPH_BITS/8, cudaMemcpyHostToDevice);
   cudaMemcpy((void *)&gpu_pub_key->max_int, max_int, CPH_BITS/8, cudaMemcpyHostToDevice);
   cudaMemcpy(&cpu_pub_key.g, (void *)&gpu_pub_key->g, CPH_BITS/8, cudaMemcpyDeviceToHost);
-  return (char *)&cpu_pub_key.g;
 }
 
 void init_priv_key(void *p, void *q, void *psquare, void *qsquare, void *q_inverse,
@@ -493,6 +417,6 @@ void init_priv_key(void *p, void *q, void *psquare, void *qsquare, void *q_inver
 }
 
 void call_raw_encrypt() {
-  raw_add<<<1, 1>>>(NULL, NULL, NULL, NULL, NULL, 0);
+  
 }
 }

@@ -1,18 +1,49 @@
 import ctypes
 from ctypes import c_char_p
 
-dll = ctypes.CDLL('./paillier.so')
+CPH_BITS = 2048
+_key_init = False
 
-n = 2 ** 2048 - 1
-g = 2 ** 2048 - 1
-max_int = 2 ** 2048 - 1
-nsquare = 2 ** 2048 - 1
+def _load_cuda_lib():
+    lib = ctypes.CDLL('./paillier.so')
+    return lib
 
-c_n = c_char_p(n.to_bytes(256, 'little'))
-c_g = c_char_p(g.to_bytes(256, 'little'))
-c_max_int = c_char_p(max_int.to_bytes(256, 'little'))
-c_nsquare = c_char_p(nsquare.to_bytes(256, 'little'))
+_cuda_lib = _load_cuda_lib()
 
-dll.init_pub_key.restype = c_char_p
+def check_key(func):
+    def wrapper():
+        if _key_init == False:
+            print('no key loaded, return')
+            return wrapper
+        func()
+        return wrapper
 
-res_p = dll.init_pub_key(c_g, c_n, c_nsquare, c_max_int)
+def init_gpu_keys(pub_key, priv_key):
+    if _key_init == True:
+        print('key initiated, return.')
+    c_n = c_char_p(pub_key.n.to_bytes(CPH_BITS//8, 'little'))
+    c_g = c_char_p(pub_key.g.to_bytes(CPH_BITS//8, 'little'))
+    c_nsquare = c_char_p(pub_key.nsquare.to_bytes(CPH_BITS//8, 'little'))
+    c_max_int = c_char_p(pub_key.max_int.to_bytes(CPH_BITS//8, 'little'))
+
+    _cuda_lib.init_pub_key(c_n, c_g, c_nsquare, c_max_int)
+
+    c_p = c_char_p(priv_key.p.to_bytes(CPH_BITS//8, 'little'))
+    c_q = c_char_p(priv_key.q.to_bytes(CPH_BITS//8, 'little'))
+    c_psquare = c_char_p(priv_key.psquare.to_bytes(CPH_BITS//8, 'little'))
+    c_qsquare = c_char_p(priv_key.qsquare.to_bytes(CPH_BITS//8, 'little'))
+    c_q_inverse = c_char_p(priv_key.q_inverse.to_bytes(CPH_BITS//8, 'little'))
+    c_hp = c_char_p(priv_key.hp.to_bytes(CPH_BITS//8, 'little'))
+    c_hq = c_char_p(priv_key.hq.to_bytes(CPH_BITS//8, 'little'))
+
+    _cuda_lib.init_priv_key(c_p, c_q, c_psquare, c_qsquare, c_q_inverse, c_hp, c_hq)
+
+    _key_init = True
+
+@check_key
+def raw_encrypt_gpu(value):
+    print('raw_encrypt')
+
+@check_key
+def raw_decrypt_gpu(value):
+    print('raw_decrypt')
