@@ -394,6 +394,7 @@ __global__ void raw_decrypt(PaillierPrivateKey *gpu_priv_key, PaillierPublicKey 
 extern "C" {
 PaillierPublicKey* gpu_pub_key;
 PaillierPrivateKey* gpu_priv_key;
+cgbn_error_report_t* err_report;
 
 void init_pub_key(void *n, void *g, void *nsquare, void *max_int) {
   cudaMalloc(&gpu_pub_key, sizeof(PaillierPublicKey));
@@ -416,7 +417,35 @@ void init_priv_key(void *p, void *q, void *psquare, void *qsquare, void *q_inver
   cudaMemcpy((void *)&gpu_priv_key->hq, hq, CPH_BITS/8, cudaMemcpyHostToDevice);
 }
 
-void call_raw_encrypt() {
-  
+void init_err_report() {
+  CUDA_CHECK(cgbn_error_report_alloc(err_report));
+}
+
+void reset() {
+  CUDA_CHECK(cgbn_error_report_free(report));
+  cudaFree(gpu_pub_key);
+  cudaFree(gpu_priv_key);
+}
+
+char* call_raw_encrypt(uint32_t *addr, int count) {
+  gpu_cph *plains_on_gpu;
+  gpu_cph *ciphers;
+  gpu_cph *ciphers_on_cpu;
+  cudaMalloc((void **)&plains_on_gpu, sizeof(gpu_cph) * count);
+  cudaMalloc((void **)&ciphers, sizeof(gpu_cph) * count);
+  cudaMemset((void *)plains_on_gpu, 0, sizeof(gpu_cph) * count);
+
+  ciphers_on_cpu = (gpu_cph *) malloc(sizeof(gpu_cph) * count);
+  for (int i = 0; i < count; i++)
+    cudaMemcpy(plains_on_gpu + i, addr + i, sizeof(uint32_t), cudaMemcpyHostToDevice);
+
+  raw_encrypt(gpu_pub_key, err_report, plains_on_gpu，ciphers, count);
+  for (int i = 0; i < count; i++)
+    cudaMemcpy(ciphers_on_cpu + i, ciphers + i; sizeof(gpu_cph), cudaMemcpyDeviceToHost);
+
+  cudaFree(plains_on_gpu);
+  cudaFree(ciphers);
+
+  return (char *)ciphers_on_cpu;
 }
 }

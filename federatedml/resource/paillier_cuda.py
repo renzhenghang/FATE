@@ -1,5 +1,5 @@
 import ctypes
-from ctypes import c_char_p
+from ctypes import c_char_p, c_int32
 from functools import wraps
 
 CPH_BITS = 2048
@@ -41,12 +41,35 @@ def init_gpu_keys(pub_key, priv_key):
     _key_init = True
 
 @check_key
-def raw_encrypt_gpu(value):
-    print('raw_encrypt')
+def raw_encrypt_gpu(values):
+    c_count = c_int32(len(values))
+    array_t = c_int32 * len(values)
+    c_array = array_t(*values)
+    _cuda_lib.call_raw_encrypt.restype = array_t
+    res_p = _cuda_lib.call_raw_encrypt(c_array, c_count)
+
+    ciphers = list(res_p)
+
+    return ciphers
+    
 
 @check_key
 def raw_decrypt_gpu(value):
     print('raw_decrypt')
 
 if __name__ == '__main__':
-    raw_decrypt_gpu(0)
+    from ..secureprotol.fate_paillier import PaillierPublicKey, PaillierPrivateKey, PaillierKeypair
+    import random
+    pub_key, priv_key = PaillierKeypair.generate_keypair(1024)
+    init_gpu_keys(pub_key, priv_key)
+    test_list = []
+    standard_cipher = []
+    for i in range(0, 10):
+        t = random.randint(0, 2**32 - 1)
+        test_list.append(t)
+        standard_cipher.append(pub_key.raw_encrypt(t))
+
+    print('standard_cipher:', standard_cipher[:2])
+    ciphers = raw_encrypt_gpu(test_list)
+    print('')
+    print(ciphers)
