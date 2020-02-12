@@ -40,6 +40,9 @@ def init_gpu_keys(pub_key, priv_key):
 
     _key_init = True
 
+def init_err_report():
+    _cuda_lib.init_err_report()
+
 @check_key
 def raw_encrypt_gpu(values):
     c_count = c_int32(len(values))

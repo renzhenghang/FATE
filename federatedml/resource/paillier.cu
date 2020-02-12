@@ -418,11 +418,11 @@ void init_priv_key(void *p, void *q, void *psquare, void *qsquare, void *q_inver
 }
 
 void init_err_report() {
-  CUDA_CHECK(cgbn_error_report_alloc(err_report));
+  CUDA_CHECK(cgbn_error_report_alloc(&err_report));
 }
 
 void reset() {
-  CUDA_CHECK(cgbn_error_report_free(report));
+  CUDA_CHECK(cgbn_error_report_free(err_report));
   cudaFree(gpu_pub_key);
   cudaFree(gpu_priv_key);
 }
