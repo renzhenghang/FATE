@@ -402,7 +402,6 @@ void init_pub_key(void *n, void *g, void *nsquare, void *max_int) {
   cudaMemcpy((void *)&gpu_pub_key->n, n, CPH_BITS/8, cudaMemcpyHostToDevice);
   cudaMemcpy((void *)&gpu_pub_key->nsquare, nsquare, CPH_BITS/8, cudaMemcpyHostToDevice);
   cudaMemcpy((void *)&gpu_pub_key->max_int, max_int, CPH_BITS/8, cudaMemcpyHostToDevice);
-  cudaMemcpy(&cpu_pub_key.g, (void *)&gpu_pub_key->g, CPH_BITS/8, cudaMemcpyDeviceToHost);
 }
 
 void init_priv_key(void *p, void *q, void *psquare, void *qsquare, void *q_inverse,
@@ -439,9 +438,9 @@ char* call_raw_encrypt(uint32_t *addr, int count) {
   for (int i = 0; i < count; i++)
     cudaMemcpy(plains_on_gpu + i, addr + i, sizeof(uint32_t), cudaMemcpyHostToDevice);
 
-  raw_encrypt(gpu_pub_key, err_report, plains_on_gpu，ciphers, count);
+  raw_encrypt(gpu_pub_key, err_report, plains_on_gpu, ciphers, count);
   for (int i = 0; i < count; i++)
-    cudaMemcpy(ciphers_on_cpu + i, ciphers + i; sizeof(gpu_cph), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ciphers_on_cpu + i, ciphers + i, sizeof(gpu_cph), cudaMemcpyDeviceToHost);
 
   cudaFree(plains_on_gpu);
   cudaFree(ciphers);
