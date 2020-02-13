@@ -19,6 +19,7 @@ def check_key(func):
     return wrapper
 
 def init_gpu_keys(pub_key, priv_key):
+    global _key_init
     if _key_init:
         print('key initiated, return.')
     c_n = c_char_p(pub_key.n.to_bytes(CPH_BITS//8, 'little'))
