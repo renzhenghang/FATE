@@ -430,6 +430,8 @@ char* call_raw_encrypt(uint32_t *addr, int count) {
   gpu_cph *plains_on_gpu;
   gpu_cph *ciphers;
   gpu_cph *ciphers_on_cpu;
+  int TPB = 128;
+  int IPB = TPB/TPI;
   cudaMalloc((void **)&plains_on_gpu, sizeof(gpu_cph) * count);
   cudaMalloc((void **)&ciphers, sizeof(gpu_cph) * count);
   cudaMemset((void *)plains_on_gpu, 0, sizeof(gpu_cph) * count);
@@ -438,7 +440,10 @@ char* call_raw_encrypt(uint32_t *addr, int count) {
   for (int i = 0; i < count; i++)
     cudaMemcpy(plains_on_gpu + i, addr + i, sizeof(uint32_t), cudaMemcpyHostToDevice);
 
-  raw_encrypt(gpu_pub_key, err_report, plains_on_gpu, ciphers, count);
+  int block_size = (count + IPB - 1)/IPB;
+  int thread_size = TPB;
+
+  raw_encrypt<<<block_size, thread_size>>>(gpu_pub_key, err_report, plains_on_gpu, ciphers, count);
   for (int i = 0; i < count; i++)
     cudaMemcpy(ciphers_on_cpu + i, ciphers + i, sizeof(gpu_cph), cudaMemcpyDeviceToHost);
 
