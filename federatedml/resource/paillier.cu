@@ -391,6 +391,13 @@ __global__ void raw_decrypt(PaillierPrivateKey *gpu_priv_key, PaillierPublicKey 
   cgbn_store(bn_env, plains + tid, tmp);
 }
 
+void print_buffer_in_hex(char *addr, int count) {
+  printf("dumping memory in hex\n");
+  for (int i = 0; i < count; i++)
+    printf('%x', addr + i);
+  printf("\n");
+}
+
 extern "C" {
 PaillierPublicKey* gpu_pub_key;
 PaillierPrivateKey* gpu_priv_key;
@@ -445,6 +452,7 @@ void call_raw_encrypt(uint32_t *addr, int count, char *res) {
   for (int i = 0; i < count; i++)
     cudaMemcpy(res + i * sizeof(gpu_cph), ciphers + i, sizeof(gpu_cph), cudaMemcpyDeviceToHost);
 
+  print_buffer_in_hex(res, sizeof(gpu_cph));
   cudaFree(plains_on_gpu);
   cudaFree(ciphers);
 
