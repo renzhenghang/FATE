@@ -403,7 +403,7 @@ void print_num_hex(char *addr, int count) {
   bool leading = false;
   for (int i = count - 1; i >= 0; i--) {
     if (*(addr + i) >= 0 && leading == false) {
-      leading = true
+      leading = true;
       printf("%x", *(addr + i) & 0xff); // remove padding.
     } else if (leading == true) {
       printf("%x", *(addr + i) & 0xff); // remove padding.
