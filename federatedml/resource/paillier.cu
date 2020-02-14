@@ -458,4 +458,40 @@ void call_raw_encrypt(uint32_t *addr, int count, char *res) {
 
   return;
 }
+
+void test_key_cp(char *res) {
+  // pub key
+  cudaMemcpy(res, &(gpu_pub_key->n), CPH_BITS/8, cudaMemcpyDeviceToHost);
+  print_buffer_in_hex(res, sizeof(gpu_cph));
+  cudaMemcpy(res, &(gpu_pub_key->g), CPH_BITS/8, cudaMemcpyDeviceToHost);
+  print_buffer_in_hex(res, sizeof(gpu_cph));
+  cudaMemcpy(res, &(gpu_pub_key->nsquare), CPH_BITS/8, cudaMemcpyDeviceToHost);
+  print_buffer_in_hex(res, sizeof(gpu_cph));
+  cudaMemcpy(res, &(gpu_pub_key->max_int), CPH_BITS/8, cudaMemcpyDeviceToHost);
+  print_buffer_in_hex(res, sizeof(gpu_cph));
+
+  // priv_key
+  cudaMemcpy(res, &(gpu_priv_key->p), CPH_BITS/8, cudaMemcpyDeviceToHost);
+  print_buffer_in_hex(res, sizeof(gpu_cph));
+
+  cudaMemcpy(res, &(gpu_priv_key->q), CPH_BITS/8, cudaMemcpyDeviceToHost);
+  print_buffer_in_hex(res, sizeof(gpu_cph));
+
+  cudaMemcpy(res, &(gpu_priv_key->psquare), CPH_BITS/8, cudaMemcpyDeviceToHost);
+  print_buffer_in_hex(res, sizeof(gpu_cph));
+
+  cudaMemcpy(res, &(gpu_priv_key->qsquare), CPH_BITS/8, cudaMemcpyDeviceToHost);
+  print_buffer_in_hex(res, sizeof(gpu_cph));
+
+  cudaMemcpy(res, &(gpu_priv_key->q_inverse), CPH_BITS/8, cudaMemcpyDeviceToHost);
+  print_buffer_in_hex(res, sizeof(gpu_cph));
+
+  cudaMemcpy(res, &(gpu_priv_key->hp), CPH_BITS/8, cudaMemcpyDeviceToHost);
+  print_buffer_in_hex(res, sizeof(gpu_cph));
+
+  cudaMemcpy(res, &(gpu_priv_key->hq), CPH_BITS/8, cudaMemcpyDeviceToHost);
+  print_buffer_in_hex(res, sizeof(gpu_cph));
+
+}
+
 }
