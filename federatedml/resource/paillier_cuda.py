@@ -66,12 +66,10 @@ if __name__ == '__main__':
     init_gpu_keys(pub_key, priv_key)
     test_list = []
     standard_cipher = []
-    for i in range(0, 2):
+    for i in range(0, 1):
         t = random.randint(0, 2**32 - 1)
         test_list.append(t)
         standard_cipher.append(pub_key.raw_encrypt(t))
 
-    print('standard_cipher:', standard_cipher[:1])
+    print('standard_cipher:', hex(standard_cipher[0]))
     ciphers = raw_encrypt_gpu(test_list)
-    print('')
-    print(ciphers.raw)
