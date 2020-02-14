@@ -1,5 +1,5 @@
 import ctypes
-from ctypes import c_char_p, c_int32
+from ctypes import c_char_p, c_int32, create_string_buffer
 from functools import wraps
 
 CPH_BITS = 2048
@@ -46,15 +46,13 @@ def init_err_report():
 
 @check_key
 def raw_encrypt_gpu(values):
+    global _cuda_lib
     c_count = c_int32(len(values))
     array_t = c_int32 * len(values)
     c_array = array_t(*values)
-    _cuda_lib.call_raw_encrypt.restype = array_t
-    res_p = _cuda_lib.call_raw_encrypt(c_array, c_count)
-
-    ciphers = list(res_p)
-
-    return ciphers
+    res_p = create_string_buffer(len(values) * 2048)
+    _cuda_lib.call_raw_encrypt(c_array, c_count, res_p)
+    return res_p
     
 
 @check_key
@@ -68,12 +66,12 @@ if __name__ == '__main__':
     init_gpu_keys(pub_key, priv_key)
     test_list = []
     standard_cipher = []
-    for i in range(0, 10):
+    for i in range(0, 2):
         t = random.randint(0, 2**32 - 1)
         test_list.append(t)
         standard_cipher.append(pub_key.raw_encrypt(t))
 
-    print('standard_cipher:', standard_cipher[:2])
+    print('standard_cipher:', standard_cipher[:1])
     ciphers = raw_encrypt_gpu(test_list)
     print('')
-    print(ciphers)
+    print(ciphers.raw)
