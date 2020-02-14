@@ -54,6 +54,24 @@ def raw_encrypt_gpu(values):
     _cuda_lib.call_raw_encrypt(c_array, c_count, res_p)
     return res_p
     
+@check_key
+def test_key(pub_key, priv_key):
+    global _cuda_lib
+    print('==========pub_key============')
+    print('n', hex(pub_key.n))
+    print('g', hex(pub_key.g))
+    print('nsquare', hex(pub_key.nsquare))
+    print('max_int', hex(pub_key.max_int))
+    print('==========priv_key==========')
+    print('p', hex(priv_key.p))
+    print('q', hex(priv_key.q))
+    print('psquare', hex(priv_key.psquare))
+    print('qsquare', hex(priv_key.qsquare))
+    print('q_inverse', hex(priv_key.q_inverse))
+    print('hp', hex(priv_key.hp))
+    print('hq', hex(priv_key.hq))
+    res_p = create_string_buffer(CPH_BITS/8)
+    _cuda_lib.test_key_cp(res_p)
 
 @check_key
 def raw_decrypt_gpu(value):
@@ -64,6 +82,7 @@ if __name__ == '__main__':
     import random
     pub_key, priv_key = PaillierKeypair.generate_keypair(1024)
     init_gpu_keys(pub_key, priv_key)
+    
     test_list = []
     standard_cipher = []
     for i in range(0, 1):
