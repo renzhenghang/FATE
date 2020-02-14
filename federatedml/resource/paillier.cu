@@ -398,6 +398,20 @@ void print_buffer_in_hex(char *addr, int count) {
   printf("\n");
 }
 
+void print_num_hex(char *addr, int count) {
+  printf("dumping memory in hex, little endine\n");
+  bool leading = false;
+  for (int i = count - 1; i >= 0; i--) {
+    if (*(addr + i) >= 0 && leading == false) {
+      leading = true
+      printf("%x", *(addr + i) & 0xff); // remove padding.
+    } else if (leading == true) {
+      printf("%x", *(addr + i) & 0xff); // remove padding.
+    }
+  }
+  printf("\n");
+}
+
 extern "C" {
 PaillierPublicKey* gpu_pub_key;
 PaillierPrivateKey* gpu_priv_key;
@@ -434,6 +448,7 @@ void reset() {
 }
 
 void call_raw_encrypt(uint32_t *addr, int count, char *res) {
+  printf("count: %d\n", count);
   gpu_cph *plains_on_gpu;
   gpu_cph *ciphers;
   int TPB = 128;
@@ -450,7 +465,7 @@ void call_raw_encrypt(uint32_t *addr, int count, char *res) {
 
   raw_encrypt<<<block_size, thread_size>>>(gpu_pub_key, err_report, plains_on_gpu, ciphers, count);
   for (int i = 0; i < count; i++)
-    cudaMemcpy(res + i * sizeof(gpu_cph), ciphers + i, sizeof(gpu_cph), cudaMemcpyDeviceToHost);
+    cudaMemcpy(res + i * CPH_BITS/8, ciphers + i, CPH_BITS/8, cudaMemcpyDeviceToHost);
 
   print_buffer_in_hex(res, sizeof(gpu_cph));
   cudaFree(plains_on_gpu);

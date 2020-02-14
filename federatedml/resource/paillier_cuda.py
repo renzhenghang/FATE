@@ -70,7 +70,7 @@ def test_key(pub_key, priv_key):
     print('q_inverse', hex(priv_key.q_inverse))
     print('hp', hex(priv_key.hp))
     print('hq', hex(priv_key.hq))
-    res_p = create_string_buffer(CPH_BITS/8)
+    res_p = create_string_buffer(CPH_BITS//8)
     _cuda_lib.test_key_cp(res_p)
 
 @check_key
@@ -82,6 +82,7 @@ if __name__ == '__main__':
     import random
     pub_key, priv_key = PaillierKeypair.generate_keypair(1024)
     init_gpu_keys(pub_key, priv_key)
+    test_key(pub_key, priv_key)
     
     test_list = []
     standard_cipher = []
