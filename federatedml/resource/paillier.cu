@@ -394,7 +394,7 @@ __global__ void raw_decrypt(PaillierPrivateKey *gpu_priv_key, PaillierPublicKey 
 void print_buffer_in_hex(char *addr, int count) {
   printf("dumping memory in hex\n");
   for (int i = 0; i < count; i++)
-    printf('%x', addr + i);
+    printf('%x', *(addr + i));
   printf("\n");
 }
 
