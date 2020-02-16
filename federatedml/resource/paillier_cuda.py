@@ -119,7 +119,7 @@ def test_raw_encrypt_obfs(ins_num):
     raw_encrypt_obfs_gpu(test_list, rand_vals, res_p)
     gpu_cipher = []
     for i in range(0, ins_num):
-        gpu_cipher.append(int.from_bytes(res_p.raw[i * 2048: (i + 1) * 2048], 'little'))
+        gpu_cipher.append(int.from_bytes(res_p.raw[i * 2048 // 8: (i + 1) * 2048 // 8], 'little'))
 
     print('gpu cipher:', hex(gpu_cipher[0]))
 
