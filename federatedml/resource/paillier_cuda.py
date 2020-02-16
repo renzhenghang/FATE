@@ -45,26 +45,22 @@ def init_err_report():
     _cuda_lib.init_err_report()
 
 @check_key
-def raw_encrypt_gpu(values):
+def raw_encrypt_gpu(values, res_p):
     global _cuda_lib
     c_count = c_int32(len(values))
     array_t = c_int32 * len(values)
     c_array = array_t(*values)
-    res_p = create_string_buffer(len(values) * 2048)
     _cuda_lib.call_raw_encrypt(c_array, c_count, res_p)
-    return res_p
 
 @check_key
-def raw_encrypt_obfs_gpu(values, rand_vals):
+def raw_encrypt_obfs_gpu(values, rand_vals, res_p):
     global _cuda_lib
     c_count = c_int32(len(values))
     array_t = c_int32 * len(values)
     c_input = array_t(*values)
     c_rand_vals = array_t(*rand_vals)
-    res_p = create_string_buffer(len(values) * 2048)
     _cuda_lib.call_raw_encrypt_obfs(c_input, c_count, res_p, c_rand_vals)
 
-    return res_p
     
 @check_key
 def test_key(pub_key, priv_key):
@@ -97,9 +93,10 @@ def test_raw_encrypt(ins_num):
         t = random.randint(0, 2**32 - 1)
         test_list.append(t)
         standard_cipher.append(pub_key.raw_encrypt(t))
-
+    res_p = create_string_buffer(ins_num * 2048)
     print('standard_cipher:', hex(standard_cipher[0]))
-    ciphers = raw_encrypt_gpu(test_list)
+    raw_encrypt_gpu(test_list, res_p)
+    print('gpu res:', repr(res_p.raw))
 
 def test_raw_encrypt_obfs(ins_num):
     from ..secureprotol.fate_paillier import PaillierPublicKey, PaillierPrivateKey, PaillierKeypair
@@ -118,8 +115,9 @@ def test_raw_encrypt_obfs(ins_num):
         standard_cipher.append(pub_key.raw_encrypt(t, r))
 
     print('standard_cipher:', hex(standard_cipher[0]))
-    ciphers = raw_encrypt_obfs_gpu(test_list, rand_vals)
-    print('gpu: cipher:', repr(ciphers.raw))
+    res_p = create_string_buffer(ins_num * 2048)
+    raw_encrypt_obfs_gpu(test_list, rand_vals, res_p)
+    print('gpu: cipher:', repr(res_p.raw))
 
 @check_key
 def raw_decrypt_gpu(value):
