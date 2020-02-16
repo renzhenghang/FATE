@@ -117,7 +117,7 @@ def test_raw_encrypt_obfs(ins_num):
     print('standard_cipher:', hex(standard_cipher[0]))
     res_p = create_string_buffer(ins_num * 2048 // 8)
     raw_encrypt_obfs_gpu(test_list, rand_vals, res_p)
-    print('gpu: cipher:', hex(res_p.raw[:2048]))
+    print('gpu: cipher:', res_p.raw[:2048].hex())
 
 @check_key
 def raw_decrypt_gpu(value):
