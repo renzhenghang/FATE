@@ -251,7 +251,7 @@ __global__ void raw_encrypt(PaillierPublicKey *gpu_pub_key, cgbn_error_report_t 
 }
 
 __global__ __noinline__ void raw_encrypt_with_obfs(PaillierPublicKey *gpu_pub_key, cgbn_error_report_t *report, 
-		gpu_cph *plains, gpu_cph *ciphers, int count, curandState *state) {
+		gpu_cph *plains, gpu_cph *ciphers, int count, uint32_t *rand_vals) {
 /*******************************************************************************
 * encryption and obfuscation in one function, with less memory copy.
 * in:
@@ -280,9 +280,9 @@ __global__ __noinline__ void raw_encrypt_with_obfs(PaillierPublicKey *gpu_pub_ke
 
   env_cph_t::cgbn_t r; 
 
-  curandState localState = state[idx];
-  unsigned int rand_r = curand_uniform(&localState) * MAX_RAND_SEED;                  
-  state[idx] = localState;
+  // curandState localState = state[idx];
+  uint32_t rand_r = rand_vals[tid];
+  // state[idx] = localState;
 
   cgbn_set_ui32(bn_env, r, rand_r); // TODO: new rand or reuse
 
@@ -448,7 +448,6 @@ void reset() {
 }
 
 void call_raw_encrypt(uint32_t *addr, int count, char *res) {
-  printf("count: %d\n", count);
   gpu_cph *plains_on_gpu;
   gpu_cph *ciphers;
   int TPB = 128;
@@ -464,14 +463,42 @@ void call_raw_encrypt(uint32_t *addr, int count, char *res) {
   int thread_size = TPB;
 
   raw_encrypt<<<block_size, thread_size>>>(gpu_pub_key, err_report, plains_on_gpu, ciphers, count);
-  for (int i = 0; i < count; i++)
-    cudaMemcpy(res + i * CPH_BITS/8, ciphers + i, CPH_BITS/8, cudaMemcpyDeviceToHost);
+  
+  cudaMemcpy(res, ciphers, sizeof(gpu_cph) * count, cudaMemcpyDeviceToHost);
 
-  print_buffer_in_hex(res, sizeof(gpu_cph));
   cudaFree(plains_on_gpu);
   cudaFree(ciphers);
 
-  return;
+}
+
+void call_raw_encrypt_obfs(uint32_t *addr, int count, char *res, uint32_t* rand_vals) {
+  gpu_cph *plains_on_gpu;
+  gpu_cph *ciphers_on_gpu;
+  uint32_t *rand_vals_gpu;
+
+  int TPB = 128;
+  int IPB = TPB/TPI;
+  cudaMalloc((void **)&plains_on_gpu, sizeof(gpu_cph) * count);
+  cudaMalloc((void **)&ciphers_on_gpu, sizeof(gpu_cph) * count);
+  cudaMalloc((void **)&rand_vals_gpu, sizeof(uint32_t) * count);
+  cudaMemset((void *)plains_on_gpu, 0, sizeof(gpu_cph) * count);
+  cudaMemcpy(rand_vals_gpu, rand_vals, sizeof(uint32_t) * count, cudaMemcpyHostToDevice);
+
+  for (int i = 0; i < count; i++)
+    cudaMemcpy(plains_on_gpu + i, addr + i, sizeof(uint32_t), cudaMemcpyHostToDevice);
+
+  int block_size = (count + IPB - 1)/IPB;
+  int thread_size = TPB;
+
+  raw_encrypt_with_obfs<<<block_size, thread_size>>>(gpu_pub_key, err_report, \
+     plains_on_gpu, ciphers_on_gpu, count, rand_vals_gpu);
+  
+  cudaMemcpy(res, ciphers_on_gpu, sizeof(gpu_cph) * count, cudaMemcpyDeviceToHost);
+
+  cudaFree(plains_on_gpu);
+  cudaFree(ciphers_on_gpu);
+  cudaFree(rand_vals_gpu);
+
 }
 
 void test_key_cp(char *res) {

@@ -53,6 +53,18 @@ def raw_encrypt_gpu(values):
     res_p = create_string_buffer(len(values) * 2048)
     _cuda_lib.call_raw_encrypt(c_array, c_count, res_p)
     return res_p
+
+@check_key
+def raw_encrypt_obfs_gpu(values, rand_vals):
+    global _cuda_lib
+    c_count = c_int32(len(values))
+    array_t = c_int32 * len(values)
+    c_input = array_t(*values)
+    c_rand_vals = array_t(*rand_vals)
+    res_p = create_string_buffer(len(values) * 2048)
+    _cuda_lib.call_raw_encrypt_obfs(c_input, c_count, res_p, c_rand_vals)
+
+    return res_p
     
 @check_key
 def test_key(pub_key, priv_key):
@@ -73,23 +85,45 @@ def test_key(pub_key, priv_key):
     res_p = create_string_buffer(CPH_BITS//8)
     _cuda_lib.test_key_cp(res_p)
 
-@check_key
-def raw_decrypt_gpu(value):
-    print('raw_decrypt')
-
-if __name__ == '__main__':
+def test_raw_encrypt(ins_num):
     from ..secureprotol.fate_paillier import PaillierPublicKey, PaillierPrivateKey, PaillierKeypair
     import random
     pub_key, priv_key = PaillierKeypair.generate_keypair(1024)
     init_gpu_keys(pub_key, priv_key)
-    test_key(pub_key, priv_key)
     
     test_list = []
     standard_cipher = []
-    for i in range(0, 1):
+    for i in range(0, ins_num):
         t = random.randint(0, 2**32 - 1)
         test_list.append(t)
         standard_cipher.append(pub_key.raw_encrypt(t))
 
     print('standard_cipher:', hex(standard_cipher[0]))
     ciphers = raw_encrypt_gpu(test_list)
+
+def test_raw_encrypt_obfs(ins_num):
+    from ..secureprotol.fate_paillier import PaillierPublicKey, PaillierPrivateKey, PaillierKeypair
+    import random
+    pub_key, priv_key = PaillierKeypair.generate_keypair(1024)
+    init_gpu_keys(pub_key, priv_key)
+    
+    test_list = []
+    standard_cipher = []
+    rand_vals = []
+    for i in range(0, ins_num):
+        t = random.randint(1, 2 ** 32 - 1)
+        r = random.randint(1, 2 ** 32 - 1)
+        test_list.append(t)
+        rand_vals.append(r)
+        standard_cipher.append(pub_key.raw_encrypt(t, r))
+
+    print('standard_cipher:', hex(standard_cipher[0]))
+    ciphers = raw_encrypt_obfs_gpu(test_list, rand_vals)
+    print('gpu: cipher:', repr(ciphers.raw))
+
+@check_key
+def raw_decrypt_gpu(value):
+    print('raw_decrypt')
+
+if __name__ == '__main__':
+    test_raw_encrypt_obfs(1)
