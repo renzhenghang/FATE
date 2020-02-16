@@ -524,7 +524,7 @@ void call_raw_add(char *a, char *b, char *res, const uint32_t count) {
 
   raw_add<<<block_size, thread_size>>>(gpu_pub_key, err_report, cipher_res, cipher_a, cipher_b, count);
 
-  cudaMemcpy(res, ciphers_r, sizeof(gpu_cph) * count, cudaMemcpyDeviceToHost);
+  cudaMemcpy(res, cipher_res, sizeof(gpu_cph) * count, cudaMemcpyDeviceToHost);
 
   cudaFree(cipher_a);
   cudaFree(cipher_b);
@@ -549,7 +549,7 @@ void call_raw_mul(char *a, uint32_t *b, char *res, const uint32_t count) {
 
   cudaMemcpy(cipher_a, a, sizeof(gpu_cph) * count, cudaMemcpyHostToDevice);
 
-  for (int i = 0; i < count, i++)
+  for (int i = 0; i < count; i++)
     cudaMemcpy(plain_b + i, b + i, sizeof(uint32_t), cudaMemcpyHostToDevice);
   
   int block_size = (count + IPB - 1) / IPB;
@@ -557,7 +557,7 @@ void call_raw_mul(char *a, uint32_t *b, char *res, const uint32_t count) {
 
   raw_mul<<<block_size, thread_size>>>(gpu_pub_key, err_report, cipher_res, cipher_a, plain_b, count);
 
-  cudaMemcpy(res, ciphers_r, sizeof(gpu_cph) * count, cudaMemcpyDeviceToHost);
+  cudaMemcpy(res, cipher_res, sizeof(gpu_cph) * count, cudaMemcpyDeviceToHost);
 
   cudaFree(cipher_a);
   cudaFree(plain_b);
