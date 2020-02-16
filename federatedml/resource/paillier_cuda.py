@@ -1,6 +1,7 @@
 import ctypes
 from ctypes import c_char_p, c_int32, create_string_buffer
 from functools import wraps
+import random
 
 CPH_BITS = 2048
 _key_init = False
@@ -61,7 +62,48 @@ def raw_encrypt_obfs_gpu(values, rand_vals, res_p):
     c_rand_vals = array_t(*rand_vals)
     _cuda_lib.call_raw_encrypt_obfs(c_input, c_count, res_p, c_rand_vals)
 
+@check_key
+def raw_add_gpu(ciphers_a, ciphers_b, res_p):
+    global _cuda_lib
+    ins_num = len(ciphers_a) # TODO: check len(ciphers_a) == len(ciphers_b)
+    in_a = sum([a.to_bytes(CPH_BITS // 8, 'little') for a in ciphers_a])
+    in_b = sum([b.to_bytes(CPH_BITS // 8, 'little') for b in ciphers_b])
+
+    c_count = c_int32(ins_num)
+
+    _cuda_lib.call_raw_add(in_a, in_b, res_p, c_count)
+
+@check_key
+def raw_mul_gpu(ciphers_a, plains_b, res_p):
+    global _cuda_lib
+    ins_num = len(ciphers_a) # TODO: check len(ciphers_a) == len(plains_b)
+    in_a = sum([a.to_bytes(CPH_BITS // 8, 'little') for a in ciphers_a])
+    in_b = sum([b.to_bytes(CPH_BITS // 8, 'little') for b in plains_b])
+
+    c_count = c_int32(ins_num)
+
+    _cuda_lib.call_raw_mul(in_a, in_b, res_p, c_count)
+
+@check_key
+def raw_decrypt_gpu(ciphers, res_p):
+    global _cuda_lib
+    ins_num = len(ciphers)
+    in_cipher = sum([a.to_bytes(CPH_BITS // 8, 'little') for a in ciphers])
+
+    c_count = c_int32(ins_num)
+
+    _cuda_lib.call_raw_decrypt(in_cipher, c_count, res_p)
+
+def gen_instance(ins_num):
+    return [random.randint(1, 2 ** 32 - 1) for i in range(ins_num)]
+
+def get_int(byte_array, count, length):
+    res = []
+    for i in range(count):
+        res.append(int.from_bytes(byte_array[i * length: (i + 1) * length], 'little'))
     
+    return res
+
 @check_key
 def test_key(pub_key, priv_key):
     global _cuda_lib
@@ -81,51 +123,54 @@ def test_key(pub_key, priv_key):
     res_p = create_string_buffer(CPH_BITS//8)
     _cuda_lib.test_key_cp(res_p)
 
-def test_raw_encrypt(ins_num):
-    from ..secureprotol.fate_paillier import PaillierPublicKey, PaillierPrivateKey, PaillierKeypair
-    import random
-    pub_key, priv_key = PaillierKeypair.generate_keypair(1024)
-    init_gpu_keys(pub_key, priv_key)
-    
-    test_list = []
-    standard_cipher = []
-    for i in range(0, ins_num):
-        t = random.randint(0, 2**32 - 1)
-        test_list.append(t)
-        standard_cipher.append(pub_key.raw_encrypt(t))
+def test_raw_encrypt(ins_num, pub_key, priv_key):
+
+    test_list = gen_instance(ins_num)
+    standard_cipher = [pub_key.raw_encrypt(t) for t in test_list]
+
     res_p = create_string_buffer(ins_num * 2048 // 8)
     print('standard_cipher:', hex(standard_cipher[0]))
     raw_encrypt_gpu(test_list, res_p)
-    print('gpu res:', repr(res_p.raw))
+    print('gpu res:', res_p.raw.hex())
 
-def test_raw_encrypt_obfs(ins_num):
-    from ..secureprotol.fate_paillier import PaillierPublicKey, PaillierPrivateKey, PaillierKeypair
-    import random
-    pub_key, priv_key = PaillierKeypair.generate_keypair(1024)
-    init_gpu_keys(pub_key, priv_key)
-    
-    test_list = []
-    standard_cipher = []
-    rand_vals = []
-    for i in range(0, ins_num):
-        t = random.randint(1, 2 ** 32 - 1)
-        r = random.randint(1, 2 ** 32 - 1)
-        test_list.append(t)
-        rand_vals.append(r)
-        standard_cipher.append(pub_key.raw_encrypt(t, r))
+def test_raw_encrypt_obfs(ins_num, pub_key, priv_key):
+    test_list = gen_instance(ins_num)
+    rand_vals = gen_instance(ins_num)
+    standard_cipher = [pub_key.raw_encrypt(test_list[i], rand_vals[i]) for i in range(ins_num)]
 
     print('standard_cipher:', hex(standard_cipher[0]))
     res_p = create_string_buffer(ins_num * 2048 // 8)
     raw_encrypt_obfs_gpu(test_list, rand_vals, res_p)
-    gpu_cipher = []
-    for i in range(0, ins_num):
-        gpu_cipher.append(int.from_bytes(res_p.raw[i * 2048 // 8: (i + 1) * 2048 // 8], 'little'))
-
+    gpu_cipher = get_int(res_p.raw, ins_num, 2048 // 8)
     print('gpu cipher:', hex(gpu_cipher[0]))
 
-@check_key
-def raw_decrypt_gpu(value):
-    print('raw_decrypt')
+def test_raw_decrypt(ins_num, pub_key, priv_key):
+    test_list = gen_instance(ins_num)
+    rand_vals = gen_instance(ins_num)
+
+    enc_res = create_string_buffer(ins_num * 2048 // 8)
+    dec_res = create_string_buffer(ins_num * 32 // 8)
+
+    raw_encrypt_obfs_gpu(test_list, rand_vals, enc_res)
+
+    enc_int = get_int(enc_res.raw, ins_num, 2048 // 8)
+
+    raw_decrypt_gpu(enc_int, dec_res)
+
+    dec_int = get_int(dec_res.raw, ins_num, 32 // 8)
+    print('plains: ', test_list[0])
+    print('dec_res: ', dec_int[0])
+
+
+def test_raw_add(ins_num, pub_key, priv_key):
+    pass
+
+def test_raw_mul(ins_num, pub_key, priv_key):
+    pass
+
 
 if __name__ == '__main__':
-    test_raw_encrypt_obfs(1)
+    from ..secureprotol.fate_paillier import PaillierPublicKey, PaillierPrivateKey, PaillierKeypair
+    pub_key, priv_key = PaillierKeypair.generate_keypair(1024)
+    init_gpu_keys(pub_key, priv_key)
+    
