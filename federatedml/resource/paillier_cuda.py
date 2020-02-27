@@ -188,7 +188,7 @@ def test_raw_mul(ins_num, pub_key, priv_key):
 
     raw_decrypt_gpu(raw_mul_res, dec_res_buf)
 
-    dec_res = get_int(dec_res_buf.raw, ins_num, 2048 // 8)
+    dec_res = get_int(dec_res_buf.raw, ins_num, 32 // 8)
 
     std_res = [test_list1[i] * test_list2[i] for i in range(ins_num)]
 
@@ -219,7 +219,7 @@ def test_raw_add(ins_num, pub_key, priv_key):
 
     raw_decrypt_gpu(raw_add_res, dec_res_buf)
 
-    dec_res = get_int(dec_res_buf.raw, ins_num, 2048 // 8)
+    dec_res = get_int(dec_res_buf.raw, ins_num, 32 // 8)
 
     std_res = [test_list1[i] + test_list2[i] for i in range(ins_num)]
 
