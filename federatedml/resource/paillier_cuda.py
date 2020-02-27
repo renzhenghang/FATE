@@ -168,7 +168,7 @@ def test_raw_decrypt(ins_num, pub_key, priv_key):
     print('dec_res: ', dec_int[0])
 
 
-def test_raw_add(ins_num, pub_key, priv_key):
+def test_raw_mul(ins_num, pub_key, priv_key):
     test_list1 = gen_instance(ins_num)
     rand_vals1 = gen_instance(ins_num)
     test_list2 = gen_instance(ins_num) # plains b
@@ -188,14 +188,14 @@ def test_raw_add(ins_num, pub_key, priv_key):
 
     raw_decrypt_gpu(raw_mul_res, dec_res_buf)
 
-    dec_res = get_int(dec_res_buf, ins_num, 2048 // 8)
+    dec_res = get_int(dec_res_buf.raw, ins_num, 2048 // 8)
 
     std_res = [test_list1[i] * test_list2[i] for i in range(ins_num)]
 
     print(dec_res[:2])
     print(std_res[:2])
 
-def test_raw_mul(ins_num, pub_key, priv_key):
+def test_raw_add(ins_num, pub_key, priv_key):
     test_list1 = gen_instance(ins_num)
     rand_vals1 = gen_instance(ins_num)
     test_list2 = gen_instance(ins_num)
@@ -219,7 +219,7 @@ def test_raw_mul(ins_num, pub_key, priv_key):
 
     raw_decrypt_gpu(raw_add_res, dec_res_buf)
 
-    dec_res = get_int(dec_res_buf, ins_num, 2048 // 8)
+    dec_res = get_int(dec_res_buf.raw, ins_num, 2048 // 8)
 
     std_res = [test_list1[i] + test_list2[i] for i in range(ins_num)]
 
@@ -230,5 +230,5 @@ if __name__ == '__main__':
     from ..secureprotol.fate_paillier import PaillierPublicKey, PaillierPrivateKey, PaillierKeypair
     pub_key, priv_key = PaillierKeypair.generate_keypair(1024)
     init_gpu_keys(pub_key, priv_key)
-    test_raw_decrypt(10, pub_key, priv_key)
+    test_raw_add(10, pub_key, priv_key)
     
