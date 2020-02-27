@@ -101,7 +101,8 @@ def get_int(byte_array, count, length):
     res = []
     for i in range(count):
         res.append(int.from_bytes(byte_array[i * length: (i + 1) * length], 'little'))
-    
+    for i in range(count):
+        print(type(res[i]))
     return res
 
 @check_key
