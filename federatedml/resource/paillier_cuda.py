@@ -224,5 +224,5 @@ if __name__ == '__main__':
     from ..secureprotol.fate_paillier import PaillierPublicKey, PaillierPrivateKey, PaillierKeypair
     pub_key, priv_key = PaillierKeypair.generate_keypair(1024)
     init_gpu_keys(pub_key, priv_key)
-    test_raw_encrypt(10, pub_key, priv_key)
+    test_raw_decrypt(10, pub_key, priv_key)
     
