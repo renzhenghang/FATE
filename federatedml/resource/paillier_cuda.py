@@ -45,6 +45,13 @@ def init_gpu_keys(pub_key, priv_key):
 def init_err_report():
     _cuda_lib.init_err_report()
 
+def get_bytes(int_array, length):
+    res = b''
+    for a in int_array:
+        res += a.to_bytes(length, 'little')
+    
+    return res
+
 @check_key
 def raw_encrypt_gpu(values, res_p):
     global _cuda_lib
@@ -66,8 +73,8 @@ def raw_encrypt_obfs_gpu(values, rand_vals, res_p):
 def raw_add_gpu(ciphers_a, ciphers_b, res_p):
     global _cuda_lib
     ins_num = len(ciphers_a) # TODO: check len(ciphers_a) == len(ciphers_b)
-    in_a = sum([a.to_bytes(CPH_BITS // 8, 'little') for a in ciphers_a])
-    in_b = sum([b.to_bytes(CPH_BITS // 8, 'little') for b in ciphers_b])
+    in_a = get_bytes(ciphers_a, CPH_BITS // 8)
+    in_b = get_bytes(ciphers_b, CPH_BITS // 8)
 
     c_count = c_int32(ins_num)
 
@@ -77,8 +84,8 @@ def raw_add_gpu(ciphers_a, ciphers_b, res_p):
 def raw_mul_gpu(ciphers_a, plains_b, res_p):
     global _cuda_lib
     ins_num = len(ciphers_a) # TODO: check len(ciphers_a) == len(plains_b)
-    in_a = sum([a.to_bytes(CPH_BITS // 8, 'little') for a in ciphers_a])
-    in_b = sum([b.to_bytes(4) for b in plains_b])
+    in_a = get_bytes(ciphers_a, CPH_BITS // 8)
+    in_b = get_bytes(plains_b, 4)
 
     c_count = c_int32(ins_num)
 
@@ -88,7 +95,7 @@ def raw_mul_gpu(ciphers_a, plains_b, res_p):
 def raw_decrypt_gpu(ciphers, res_p):
     global _cuda_lib
     ins_num = len(ciphers)
-    in_cipher = sum([a.to_bytes(CPH_BITS // 8, 'little') for a in ciphers])
+    in_cipher = get_bytes(ciphers, CPH_BITS // 8)
 
     c_count = c_int32(ins_num)
 
@@ -101,8 +108,6 @@ def get_int(byte_array, count, length):
     res = []
     for i in range(count):
         res.append(int.from_bytes(byte_array[i * length: (i + 1) * length], 'little'))
-    for i in range(count):
-        print(type(res[i]))
     return res
 
 @check_key
