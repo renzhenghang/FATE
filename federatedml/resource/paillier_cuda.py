@@ -78,7 +78,7 @@ def raw_mul_gpu(ciphers_a, plains_b, res_p):
     global _cuda_lib
     ins_num = len(ciphers_a) # TODO: check len(ciphers_a) == len(plains_b)
     in_a = sum([a.to_bytes(CPH_BITS // 8, 'little') for a in ciphers_a])
-    in_b = sum([b.to_bytes(CPH_BITS // 8, 'little') for b in plains_b])
+    in_b = sum([b.to_bytes(4) for b in plains_b])
 
     c_count = c_int32(ins_num)
 
@@ -163,14 +163,66 @@ def test_raw_decrypt(ins_num, pub_key, priv_key):
 
 
 def test_raw_add(ins_num, pub_key, priv_key):
-    pass
+    test_list1 = gen_instance(ins_num)
+    rand_vals1 = gen_instance(ins_num)
+    test_list2 = gen_instance(ins_num) # plains b
+
+    enc_res1 = create_string_buffer(ins_num * 2048 // 8)
+
+    raw_encrypt_obfs_gpu(test_list1, rand_vals1, enc_res1)
+
+    ciphers_1 = get_int(enc_res1.raw, ins_num, 2048 // 8) # ciphers a
+
+
+    raw_mul_buf = create_string_buffer(ins_num * 2048 // 8)
+    raw_mul_gpu(ciphers_1, test_list2, raw_mul_buf)
+
+    raw_mul_res = get_int(raw_mul_buf.raw, ins_num, 2048 // 8)
+    dec_res_buf = create_string_buffer(ins_num * 2048 // 8)
+
+    raw_decrypt_gpu(raw_mul_res, dec_res_buf)
+
+    dec_res = get_int(dec_res_buf, ins_num, 2048 // 8)
+
+    std_res = [test_list1[i] * test_list2[i] for i in range(ins_num)]
+
+    print(dec_res[:2])
+    print(std_res[:2])
 
 def test_raw_mul(ins_num, pub_key, priv_key):
-    pass
+    test_list1 = gen_instance(ins_num)
+    rand_vals1 = gen_instance(ins_num)
+    test_list2 = gen_instance(ins_num)
+    rand_vals2 = gen_instance(ins_num)
 
+    enc_res1 = create_string_buffer(ins_num * 2048 // 8)
+    enc_res2 = create_string_buffer(ins_num * 2048 // 8)
+
+    raw_encrypt_obfs_gpu(test_list1, rand_vals1, enc_res1)
+    raw_encrypt_obfs_gpu(test_list2, rand_vals2, enc_res2)
+
+    ciphers_1 = get_int(enc_res1.raw, ins_num, 2048 // 8)
+    ciphers_2 = get_int(enc_res2.raw, ins_num, 2048 // 8)
+
+
+    raw_add_buf = create_string_buffer(ins_num * 2048 // 8)
+    raw_add_gpu(ciphers_1, ciphers_2, raw_add_buf)
+
+    raw_add_res = get_int(raw_add_buf.raw, ins_num, 2048 // 8)
+    dec_res_buf = create_string_buffer(ins_num * 2048 // 8)
+
+    raw_decrypt_gpu(raw_add_res, dec_res_buf)
+
+    dec_res = get_int(dec_res_buf, ins_num, 2048 // 8)
+
+    std_res = [test_list1[i] + test_list2[i] for i in range(ins_num)]
+
+    print(dec_res[:2])
+    print(std_res[:2])
 
 if __name__ == '__main__':
     from ..secureprotol.fate_paillier import PaillierPublicKey, PaillierPrivateKey, PaillierKeypair
     pub_key, priv_key = PaillierKeypair.generate_keypair(1024)
     init_gpu_keys(pub_key, priv_key)
+    test_raw_encrypt(10, pub_key, priv_key)
     
