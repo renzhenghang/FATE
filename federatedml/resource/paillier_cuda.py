@@ -102,7 +102,7 @@ def raw_decrypt_gpu(ciphers, res_p):
     _cuda_lib.call_raw_decrypt(in_cipher, c_count, res_p)
 
 def gen_instance(ins_num):
-    return [random.randint(1, 2 ** 32 - 1) for i in range(ins_num)]
+    return [random.randint(1, 2 ** 16 - 1) for i in range(ins_num)]
 
 def get_int(byte_array, count, length):
     res = []
