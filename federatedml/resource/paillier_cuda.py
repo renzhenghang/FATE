@@ -215,7 +215,7 @@ def test_raw_add(ins_num, pub_key, priv_key):
     raw_add_gpu(ciphers_1, ciphers_2, raw_add_buf)
 
     raw_add_res = get_int(raw_add_buf.raw, ins_num, 2048 // 8)
-    dec_res_buf = create_string_buffer(ins_num * 2048 // 8)
+    dec_res_buf = create_string_buffer(ins_num * 32 // 8)
 
     raw_decrypt_gpu(raw_add_res, dec_res_buf)
 
