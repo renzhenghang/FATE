@@ -20,7 +20,10 @@ from collections.abc import Mapping
 from federatedml.secureprotol.fixedpoint import FixedPointNumber
 from federatedml.secureprotol import gmpy_math
 from ..resource.task_mgr import EncryptTask, DecryptTask, AddTask, MulTask
+from ..resource.paillier_cuda import raw_encrypt_obfs_gpu, raw_encrypt_gpu, raw_decrypt_gpu, \
+     raw_add_gpu, raw_mul_gpu, init_gpu_keys, init_err_report
 import random
+from ctypes import create_string_buffer
 random.seed(0)
 # from ..resource import compute_engine as CE
 
@@ -46,6 +49,9 @@ class PaillierKeypair(object):
 
         public_key = PaillierPublicKey(n)
         private_key = PaillierPrivateKey(public_key, p, q)
+
+        init_gpu_keys(public_key, private_key)
+        init_err_report()
 
         return public_key, private_key
 
@@ -85,15 +91,25 @@ class PaillierPublicKey(object):
             raise TypeError("plaintext should be int, but got: %s" %
                             type(plaintext))
 
-        if plaintext >= (self.n - self.max_int) and plaintext < self.n:
-            # Very large plaintext, take a sneaky shortcut using inverses
-            neg_plaintext = self.n - plaintext  # = abs(plaintext - nsquare)
-            neg_ciphertext = (self.n * neg_plaintext + 1) % self.nsquare
-            ciphertext = gmpy_math.invert(neg_ciphertext, self.nsquare)
-        else:
-            ciphertext = (self.n * plaintext + 1) % self.nsquare
+        # if plaintext >= (self.n - self.max_int) and plaintext < self.n:
+        #     # Very large plaintext, take a sneaky shortcut using inverses
+        #     neg_plaintext = self.n - plaintext  # = abs(plaintext - nsquare)
+        #     neg_ciphertext = (self.n * neg_plaintext + 1) % self.nsquare
+        #     ciphertext = gmpy_math.invert(neg_ciphertext, self.nsquare)
+        # else:
+        #     ciphertext = (self.n * plaintext + 1) % self.nsquare
 
-        ciphertext = self.apply_obfuscator(ciphertext, random_value)
+        # ciphertext = self.apply_obfuscator(ciphertext, random_value)
+
+        plain_list = [plaintext]
+        if random_value is not None:
+            random_list = [random_value]
+        else:
+            random_list = [random.randint(0, 2 ** 16 - 1)]
+        res_buf = create_string_buffer(2048 // 8)
+        raw_encrypt_obfs_gpu(plain_list, random_list, res_buf)
+
+        ciphertext = int.from_bytes(res_buf.raw, 'little')
 
         return ciphertext
 
@@ -170,15 +186,22 @@ class PaillierPrivateKey(object):
             raise TypeError("ciphertext should be an int, not: %s" %
                 type(ciphertext))
 
-        mp = self.l_func(gmpy_math.powmod(ciphertext,
-                                              self.p-1, self.psquare),
-                                              self.p) * self.hp % self.p
+        # mp = self.l_func(gmpy_math.powmod(ciphertext,
+        #                                       self.p-1, self.psquare),
+        #                                       self.p) * self.hp % self.p
 
-        mq = self.l_func(gmpy_math.powmod(ciphertext,
-                                              self.q-1, self.qsquare),
-                                              self.q) * self.hq % self.q
+        # mq = self.l_func(gmpy_math.powmod(ciphertext,
+        #                                       self.q-1, self.qsquare),
+        #                                       self.q) * self.hq % self.q
 
-        return self.crt(mp, mq)
+        # return self.crt(mp, mq)
+        cipher_list = [ciphertext]
+        res_buf = create_string_buffer(32 // 8)
+        raw_decrypt_gpu(cipher_list, res_buf)
+
+        plain = int.from_bytes(res_buf.raw, 'little')
+
+        return plain
 
     def decrypt(self, encrypted_number):
         """return the decrypted & decoded plaintext of encrypted_number.
@@ -335,9 +358,15 @@ class PaillierEncryptedNumber(object):
     def __raw_add(self, e_x, e_y, exponent):
         """return the integer E(x + y) given ints E(x) and E(y).
         """
-        ciphertext =  e_x * e_y % self.public_key.nsquare
+        # ciphertext =  e_x * e_y % self.public_key.nsquare
+        e_x_list = [e_x]
+        e_y_list = [e_y]
+        res_buf = create_string_buffer(2048 // 8)
+        raw_add_gpu(e_x_list, e_y_list, res_buf)
 
-        return PaillierEncryptedNumber(self.public_key, ciphertext, exponent)
+        res = int.from_bytes(res_buf.raw, 'little')
+
+        return PaillierEncryptedNumber(self.public_key, res, exponent)
 
 
 class PaillierEncryptedArray:
