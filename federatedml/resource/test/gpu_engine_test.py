@@ -28,7 +28,8 @@ class TestGPU(unittest.TestCase):
 
         dec_task = DecryptTask(self.priv_key, self.pub_key, enc_res, device=consts.GPU)
         dec_res = TaskManager.run_task(dec_task)
-
+        print(test_inst)
+        print(dec_res)
         assert(test_inst == dec_res)
 
 

@@ -120,9 +120,9 @@ class DecryptTask(Task):
         raw_ciphers = [v.ciphertext(be_secure=False) for v in self.cipher]
         raw_dec = raw_decrypt_gpu(raw_ciphers)
         decoder = lambda dec, cipher : FixedPointNumber(dec, cipher.exponent).decode()
-        decoded = map(decoder, raw_dec, raw_ciphers)
+        decoded = map(decoder, raw_dec, self.cipher)
 
-        return decoded
+        return list(decoded)
 
     def visitFPGA(self, engine):
         pass
