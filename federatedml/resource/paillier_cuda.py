@@ -110,14 +110,17 @@ def raw_mul_gpu(ciphers_a, plains_b, res_p):
     _cuda_lib.call_raw_mul(in_a, in_b, res_p, c_count)
 
 @check_key
-def raw_decrypt_gpu(ciphers, res_p):
+def raw_decrypt_gpu(ciphers):
     global _cuda_lib
+    res_p = create_string_buffer(len(ciphers) * 4)
     ins_num = len(ciphers)
     in_cipher = get_bytes(ciphers, CPH_BYTES)
 
     c_count = c_int32(ins_num)
 
     _cuda_lib.call_raw_decrypt(in_cipher, c_count, res_p)
+
+    return get_int(res_p.raw, ins_num, 4)
 
 
 """

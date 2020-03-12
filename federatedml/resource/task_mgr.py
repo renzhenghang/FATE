@@ -2,7 +2,7 @@ import random
 random.seed(0)
 from ..secureprotol import gmpy_math
 from .compute_engine import cpu_engine, gpu_engine, fpga_engine
-from .paillier_cuda import raw_encrypt_gpu, raw_encrypt_obfs_gpu
+from .paillier_cuda import raw_encrypt_gpu, raw_encrypt_obfs_gpu, raw_decrypt_gpu
 from ..secureprotol.fixedpoint import FixedPointNumber
 from ..secureprotol.fate_paillier import PaillierEncryptedNumber
 from ..util import consts 
@@ -108,7 +108,21 @@ class DecryptTask(Task):
         return x
 
     def visitGPU(self, engine):
-        pass
+        """
+        decrypt on GPU
+        """
+        for c in self.cipher:
+            if type(c) is not PaillierEncryptedNumber:
+                raise TypeError('cipher text type not PaillierEncryptedNumber')
+        
+        # get raw coding
+        # TODO: test if pub key is the same.
+        raw_ciphers = [v.ciphertext(be_secure=False) for v in self.cipher]
+        raw_dec = raw_decrypt_gpu(raw_ciphers)
+        decoder = lambda dec, cipher : FixedPointNumber(dec, cipher.exponent).decode()
+        decoded = map(decoder, raw_dec, raw_ciphers)
+
+        return decoded
 
     def visitFPGA(self, engine):
         pass
