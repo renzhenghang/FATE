@@ -5,7 +5,7 @@ class engine:
 
     pass
 
-class CPUEngine(engine):
+class _CPUEngine(engine):
     """
     common execution of operations on CPU.
     """
@@ -13,21 +13,28 @@ class CPUEngine(engine):
         task.visitCPU(self)
 
 
-class GPUEngine(engine):
+class _GPUEngine(engine):
     """
     operations on GPU
     """
+    def __init__(self):
+        """
+        check the status of gpu function
+        """
+        pass
+
+
     def accept(self, task):
         task.visitGPU(self)
 
 
-class FPGAEngine(engine):
+class _FPGAEngine(engine):
     """
     operations on FPGA
     """
     def accept(self, task):
         task.visitFPGA(self)
 
-cpu_engine = CPUEngine()
-gpu_engine = GPUEngine()
-fpga_engine = FPGAEngine()
+cpu_engine = _CPUEngine()
+gpu_engine = _GPUEngine()
+fpga_engine = _FPGAEngine()

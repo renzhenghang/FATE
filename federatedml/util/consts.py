@@ -125,3 +125,8 @@ IMEI = 'imei'
 MD5 = 'md5'
 SHA256 = 'sha256'
 INTERSECT_CACHE_TAG = 'Za'
+
+# device
+GPU = 'gpu'
+CPU = 'cpu'
+FPGA = 'fpga'

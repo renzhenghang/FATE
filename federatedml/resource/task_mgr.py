@@ -1,58 +1,96 @@
 import random
 random.seed(0)
 from ..secureprotol import gmpy_math
-from .compute_engine import CPUEngine, GPUEngine, FPGAEngine
+from .compute_engine import cpu_engine, gpu_engine, fpga_engine
+from .paillier_cuda import raw_encrypt_gpu, raw_encrypt_obfs_gpu
+from ..secureprotol.fixedpoint import FixedPointNumber
+from ..secureprotol.fate_paillier import PaillierEncryptedNumber
+from ..util import consts 
+import numpy as np
 
 class Task:
     """
     describe compute task submitted to the task manager
     """
     def visit(self, engine):
-        pass
+        engine.accept(self)
 
 
 class EncryptTask(Task):
-    def __init__(self, pub_key, plaintext, obfuscate=True):
+    def __init__(self, pub_key, plaintexts, obfuscate=True, device=consts.CPU, precision=None):
         self.pub_key = pub_key
-        self.plaintext = plaintext
+        self.plaintexts = plaintexts
         self.obfuscate = obfuscate
+        self.device = device
+        self.precision = precision
 
-    def visitCPU(self, engine:CPUEngine):
-        if not isinstance(self.plaintext, int):
-            raise TypeError("plaintext should be int, but got: %s" %
-                            type(self.plaintext))
+    def encode(self):
+        for plaintext in self.plaintexts:
+            if type(plaintext) not in [int, float, np.int16, np.int32, np.int64, np.float16, \
+                np.float32, np.float64]:
+                raise TypeError("plaintext should be int or float, but got: %s" %
+                                type(plaintext))
+        return [FixedPointNumber.encode(v, self.pub_key.n, self.pub_key.max_int, self.precision) \
+            for v in self.plaintexts]
 
-        if self.plaintext >= (self.pub_key.n - self.pub_key.max_int) and self.plaintext < self.pub_key.n:
-            # Very large plaintext, take a sneaky shortcut using inverses
-            neg_plaintext = self.pub_key.n - self.plaintext  # = abs(plaintext - nsquare)
-            neg_ciphertext = (self.pub_key.n * neg_plaintext + 1) % self.pub_key.nsquare
-            ciphertext = gmpy_math.invert(neg_ciphertext, self.pub_key.nsquare)
-        else:
-            ciphertext = (self.pub_key.n * self.plaintext + 1) % self.pub_key.nsquare
+    def visitCPU(self, engine):
+        """
+        encryption task on CPU
+        """
+        encoded_texts = self.encode()
+        res = []
+        for encoded_elem in encoded_texts:
+            plaintext = encoded_elem.encoding
+            if plaintext >= (self.pub_key.n - self.pub_key.max_int) and plaintext < self.pub_key.n:
+                # Very large plaintext, take a sneaky shortcut using inverses
+                neg_plaintext = self.pub_key.n - plaintext  # = abs(plaintext - nsquare)
+                neg_ciphertext = (self.pub_key.n * neg_plaintext + 1) % self.pub_key.nsquare
+                ciphertext = gmpy_math.invert(neg_ciphertext, self.pub_key.nsquare)
+            else:
+                ciphertext = (self.pub_key.n * plaintext + 1) % self.pub_key.nsquare
 
-        if self.obfuscate:
-            # r = random.SystemRandom().randrange(1, self.pub_key.n)
-            r = random.randrange(1, self.pub_key.n)
-            obfuscator = gmpy_math.powmod(r, self.pub_key.n, self.pub_key.nsquare)
+            if self.obfuscate:
+                # r = random.SystemRandom().randrange(1, self.pub_key.n)
+                r = random.randrange(1, self.pub_key.n)
+                obfuscator = gmpy_math.powmod(r, self.pub_key.n, self.pub_key.nsquare)
+                ciphertext = ( ciphertext * obfuscator ) % self.pub_key.nsquare
+            
+            encrypted_text = PaillierEncryptedNumber(self.pub_key, ciphertext, encoded_elem.exponent)
+            res.append(encrypted_text)
 
-            ciphertext = ( ciphertext * obfuscator ) % self.pub_key.nsquare
-
-        return ciphertext
+        return res
     
-    def visitGPU(self, engine: GPUEngine):
-        print('enc task on GPU not implemented')
+    def visitGPU(self, engine):
+        """
+        encryption task on GPU
+        """
+        encoded_texts = self.encode()
 
-    def visitFPGA(self, engine: FPGAEngine):
-        print('enc task on FPGA not implemented')
+        encoded_list = [v.encoding for v in encoded_texts]
+        if self.obfuscate:
+            rand_vals = [random.randint(1, 2 ** 32 - 1) for _ in range(len(encoded_list))]
+            encrypted_list = raw_encrypt_obfs_gpu(encoded_list, rand_vals)
+        else:
+            encrypted_list = raw_encrypt_gpu(encoded_list)
+        
+        paillier_nums = [PaillierEncryptedNumber(self.pub_key, encrypted_list[i], encoded_texts[i].exponent) \
+            for i in range(len(encoded_texts))]
+        
+        return paillier_nums
+
+
+    def visitFPGA(self, engine):
+        raise NotImplementedError("enc task on FPGA not implemented.")
 
 class DecryptTask(Task):
-    def __init__(self, priv_key, pub_key, cipher):
+    def __init__(self, priv_key, pub_key, cipher, device=consts.CPU):
         self.priv_key = priv_key
         self.pub_key = pub_key
         self.cipher = cipher
         self.l_func = lambda x, p : (x - 1) // p 
+        self.device = device
 
-    def visitCPU(self, engine:CPUEngine):
+    def visitCPU(self, engine):
         if not isinstance(self.cipher, int):
             raise TypeError("ciphertext should be an int, not: %s" %
                 type(self.cipher))
@@ -69,40 +107,42 @@ class DecryptTask(Task):
         x = (mq + (u * self.priv_key.q)) % self.pub_key.n
         return x
 
-    def visitGPU(self, engine:GPUEngine):
+    def visitGPU(self, engine):
         pass
 
-    def visitFPGA(self, engine:FPGAEngine):
+    def visitFPGA(self, engine):
         pass
 
 class AddTask(Task):
-    def __init__(self, cipher_a, cipher_b, pub_key):
+    def __init__(self, cipher_a, cipher_b, pub_key, device=consts.CPU):
         self.cipher_a = cipher_a
         self.cipher_b = cipher_b
         self.pub_key = pub_key
+        self.device = device
     
-    def visitCPU(self, engine:CPUEngine):
+    def visitCPU(self, engine):
         pass
 
-    def visitGPU(self, engine:GPUEngine):
+    def visitGPU(self, engine):
         pass
 
-    def visitFPGA(self, engine:FPGAEngine):
+    def visitFPGA(self, engine):
         pass
 
 class MulTask(Task):
-    def __init__(self, cipher_a, cipher_b, pub_key):
+    def __init__(self, cipher_a, cipher_b, pub_key, device=consts.CPU):
         self.cipher_a = cipher_a
         self.cipher_b = cipher_b
         self.pub_key = pub_key
+        self.device=device
     
-    def visitCPU(self, engine:CPUEngine):
+    def visitCPU(self, engine):
         pass
 
-    def visitGPU(self, engine:GPUEngine):
+    def visitGPU(self, engine):
         pass
 
-    def visitFPGA(self, engine:FPGAEngine):
+    def visitFPGA(self, engine):
         pass
 
 class Scheduler:
@@ -130,7 +170,7 @@ class FifoScheduler(Scheduler):
     def stop(self):
         pass
 
-class TaskManager:
+class _TaskManager:
     """
     task manager is for submitting the task and checking the status of task, e.g. success or error.
     """
@@ -140,9 +180,19 @@ class TaskManager:
             'fifo': FifoScheduler(self)
         }
         self.res_queue = []
+        self.devices = {
+            consts.CPU: cpu_engine,
+            consts.GPU: gpu_engine,
+            consts.FPGA: fpga_engine
+        }
 
     def submit_task(self, task):
         pass
 
     def set_scheduler(self, strategy='fifo'):
         pass
+
+    def run_task(self, task):
+        return task.visit(self.devices[task.device])
+
+TaskManager = _TaskManager()
