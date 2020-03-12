@@ -19,7 +19,6 @@
 from collections.abc import Mapping
 from federatedml.secureprotol.fixedpoint import FixedPointNumber
 from federatedml.secureprotol import gmpy_math
-from ..resource.task_mgr import EncryptTask, DecryptTask, AddTask, MulTask
 from ..resource.paillier_cuda import raw_encrypt_obfs_gpu, raw_encrypt_gpu, raw_decrypt_gpu, \
      raw_add_gpu, raw_mul_gpu, init_gpu_keys, init_err_report
 import random
