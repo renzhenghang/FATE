@@ -1,8 +1,8 @@
 import unittest
 
 from federatedml.secureprotol.fate_paillier import PaillierKeypair
-from ..task_mgr import EncryptTask, DecryptTask, TaskManager
-from ...util import consts
+from federatedml.resource.task_mgr import EncryptTask, DecryptTask, TaskManager
+from federatedml.util import consts
 import random
 random.seed(0)
 
