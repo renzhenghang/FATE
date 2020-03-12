@@ -17,7 +17,8 @@ def check_key(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         if _key_init:
-            func(*args, **kwargs)
+            return func(*args, **kwargs)
+        # TODO: Raise Error
     return wrapper
 
 def init_gpu_keys(pub_key, priv_key):

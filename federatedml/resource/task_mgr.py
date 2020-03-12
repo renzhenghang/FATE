@@ -13,7 +13,7 @@ class Task:
     describe compute task submitted to the task manager
     """
     def visit(self, engine):
-        engine.accept(self)
+        return engine.accept(self)
 
 
 class EncryptTask(Task):
