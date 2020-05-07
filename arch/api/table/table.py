@@ -177,3 +177,10 @@ class Table(object):
         return FateSession.save_data_table_meta(kv=kv,
                                                 data_table_name="%s.meta" % self.get_name(),
                                                 data_table_namespace=self.get_namespace())
+
+    
+    def serialize(self):
+        pass
+
+    def deserialize(self, kv, shape):
+        pass

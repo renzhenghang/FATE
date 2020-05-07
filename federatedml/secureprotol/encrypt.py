@@ -170,6 +170,22 @@ class PaillierEncrypt(Encrypt):
         else:
             return None
 
+    def encrypt_list(self, values):
+        pass
+
+    def decrypt_list(self, values):
+        pass
+
+    def table_encrypt(self, table):
+        values, shape = table.serialize()
+        encrypted = self.encrypt_list(values)
+        table.deserialize(encrypted, shape)
+
+    def table_decrypt(self, table):
+        values, shape = table.serialize()
+        decrypted = self.decrypt_list(values)
+        table.deserialize(decrypted, shape)
+
 
 class FakeEncrypt(Encrypt):
     def encrypt(self, value):
