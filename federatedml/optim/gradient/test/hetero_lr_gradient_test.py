@@ -47,50 +47,50 @@ class TestHeteroLogisticGradient(unittest.TestCase):
 
         self.loss = 4.505647
 
-    # def test_compute_fore_gradient(self):
-    #     # fore_gradient = self.hetero_lr_gradient.compute_and_aggregate_forwards(self.data_inst, self.wx)
-    #     model_weights = LinearModelWeights(l=self.w, fit_intercept=False)
-    #
-    #     class EncryptedCalculator(object):
-    #         encrypter = self.paillier_encrypt
-    #
-    #         def encrypt_row(self, row):
-    #             return np.array([self.encrypter.encrypt(row)])
-    #
-    #         def encrypt(self, input_data):
-    #             return input_data.mapValues(self.encrypt_row)
-    #
-    #     encrypted_calculator = [EncryptedCalculator()]
-    #     batch_index = 0
-    #     fore_gradient = self.hetero_lr_gradient.compute_and_aggregate_forwards(self.data_inst,
-    #                                                                            model_weights,
-    #                                                                            encrypted_calculator,
-    #                                                                            batch_index)
-    #
-    #     fore_gradient_local = [self.paillier_encrypt.decrypt(iterator[1]) for iterator in fore_gradient.collect()]
-    #
-    #     self.assertListEqual(fore_gradient_local, self.fore_gradient_local)
+    def test_compute_fore_gradient(self):
+        # fore_gradient = self.hetero_lr_gradient.compute_and_aggregate_forwards(self.data_inst, self.wx)
+        model_weights = LinearModelWeights(l=self.w, fit_intercept=False)
+    
+        class EncryptedCalculator(object):
+            encrypter = self.paillier_encrypt
+    
+            def encrypt_row(self, row):
+                return np.array([self.encrypter.encrypt(row)])
+    
+            def encrypt(self, input_data):
+                return input_data.mapValues(self.encrypt_row)
+    
+        encrypted_calculator = [EncryptedCalculator()]
+        batch_index = 0
+        fore_gradient = self.hetero_lr_gradient.compute_and_aggregate_forwards(self.data_inst,
+                                                                               model_weights,
+                                                                               encrypted_calculator,
+                                                                               batch_index)
+    
+        fore_gradient_local = [self.paillier_encrypt.decrypt(iterator[1]) for iterator in fore_gradient.collect()]
+    
+        self.assertListEqual(fore_gradient_local, self.fore_gradient_local)
 
-    # def test_compute_gradient(self):
-    #     fore_gradient = self.hetero_lr_gradient.compute_fore_gradient(self.data_inst, self.wx)
-    #
-    #     gradient = self.hetero_lr_gradient.compute_gradient(self.data_inst, fore_gradient, fit_intercept=False)
-    #     de_gradient = [self.paillier_encrypt.decrypt(iterator) for iterator in gradient]
-    #     self.assertListEqual(de_gradient, self.gradient)
-    #
-    #     gradient = self.hetero_lr_gradient.compute_gradient(self.data_inst, fore_gradient, fit_intercept=True)
-    #     de_gradient = [self.paillier_encrypt.decrypt(iterator) for iterator in gradient]
-    #     self.assertListEqual(de_gradient, self.gradient_fit_intercept)
-    #
-    # def test_compute_gradient_and_loss(self):
-    #     fore_gradient = self.hetero_lr_gradient.compute_fore_gradient(self.data_inst, self.wx)
-    #     gradient, loss = self.hetero_lr_gradient.compute_gradient_and_loss(self.data_inst, fore_gradient, self.wx,
-    #                                                                        self.en_sum_wx_square, False)
-    #     de_gradient = [self.paillier_encrypt.decrypt(i) for i in gradient]
-    #     self.assertListEqual(de_gradient, self.gradient)
-    #
-    #     diff_loss = np.abs(self.loss - self.paillier_encrypt.decrypt(loss))
-    #     self.assertLess(diff_loss, 1e-5)
+    def test_compute_gradient(self):
+        fore_gradient = self.hetero_lr_gradient.compute_fore_gradient(self.data_inst, self.wx)
+    
+        gradient = self.hetero_lr_gradient.compute_gradient(self.data_inst, fore_gradient, fit_intercept=False)
+        de_gradient = [self.paillier_encrypt.decrypt(iterator) for iterator in gradient]
+        self.assertListEqual(de_gradient, self.gradient)
+    
+        gradient = self.hetero_lr_gradient.compute_gradient(self.data_inst, fore_gradient, fit_intercept=True)
+        de_gradient = [self.paillier_encrypt.decrypt(iterator) for iterator in gradient]
+        self.assertListEqual(de_gradient, self.gradient_fit_intercept)
+    
+    def test_compute_gradient_and_loss(self):
+        fore_gradient = self.hetero_lr_gradient.compute_fore_gradient(self.data_inst, self.wx)
+        gradient, loss = self.hetero_lr_gradient.compute_gradient_and_loss(self.data_inst, fore_gradient, self.wx,
+                                                                           self.en_sum_wx_square, False)
+        de_gradient = [self.paillier_encrypt.decrypt(i) for i in gradient]
+        self.assertListEqual(de_gradient, self.gradient)
+    
+        diff_loss = np.abs(self.loss - self.paillier_encrypt.decrypt(loss))
+        self.assertLess(diff_loss, 1e-5)
 
 
 if __name__ == "__main__":
